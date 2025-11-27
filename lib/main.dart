@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart'; // 1. Jangan lupa import ini
+import 'package:google_fonts/google_fonts.dart';
 import 'course/courses.dart';
 import 'course/playlist_course.dart';
+import 'homepage.dart'; // Import homepage
+import 'mentoring.dart'; // Import halaman mentoring (zoom meeting)
 
 void main() {
   runApp(const MyApp());
@@ -18,17 +20,15 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.brown),
         useMaterial3: true,
-
-        // 2. TAMBAHKAN BARIS AJAIB INI:
-        // Ini bikin semua teks di aplikasi otomatis jadi Poppins
         textTheme: GoogleFonts.poppinsTextTheme(),
       ),
-      home: const CoursePage(),
+      // Langsung buka homepage
+      home: const HomePage(),
     );
   }
 }
 
-// 3. Ini Halaman Depan (Landing Page)
+// Menu Utama kalau mau pakai navigation
 class MenuUtama extends StatelessWidget {
   const MenuUtama({super.key});
 
@@ -46,7 +46,7 @@ class MenuUtama extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
-            // 4. Ini Tombol untuk pindah halaman
+            // Tombol ke Homepage
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.brown,
@@ -57,7 +57,48 @@ class MenuUtama extends StatelessWidget {
                 ),
               ),
               onPressed: () {
-                // LOGIKA PINDAH HALAMAN (ROUTING)
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const HomePage()),
+                );
+              },
+              child: const Text("Buka Homepage"),
+            ),
+            
+            const SizedBox(height: 15),
+            
+            // Tombol ke Mentoring
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE89B8E),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 15,
+                ),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ZoomMeetingScreen()),
+                );
+              },
+              child: const Text("Buka Mentoring"),
+            ),
+            
+            const SizedBox(height: 15),
+            
+            // Tombol ke Course Page
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.brown,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 15,
+                ),
+              ),
+              onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const CoursePage()),
