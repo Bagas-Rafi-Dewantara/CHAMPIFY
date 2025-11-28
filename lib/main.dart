@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'course/courses.dart';
 import 'course/playlist_course.dart';
-import 'homepage.dart'; // Import homepage
-import 'mentoring.dart'; // Import halaman mentoring (zoom meeting)
+import 'homepage.dart';
+import 'mentoring.dart';
+import 'competition.dart'; // Import competition
 
 void main() {
   runApp(const MyApp());
@@ -23,7 +24,7 @@ class MyApp extends StatelessWidget {
         textTheme: GoogleFonts.poppinsTextTheme(),
       ),
       // Langsung buka homepage
-      home: const HomePage(),
+      home: const MenuUtama(),
     );
   }
 }
@@ -105,6 +106,27 @@ class MenuUtama extends StatelessWidget {
                 );
               },
               child: const Text("Buka Course Page"),
+            ),
+            
+            const SizedBox(height: 15),
+            
+            // Tombol ke Competition
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 15,
+                ),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CompetitionListScreen()),
+                );
+              },
+              child: const Text("Buka Competition"),
             ),
           ],
         ),
