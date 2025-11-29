@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // 1. Wajib Import Ini
+import 'package:supabase_flutter/supabase_flutter.dart'; // Import Supabase dari branch Shafwa
 
-// Import halaman-halaman kamu
+// Import halaman-halaman
+import 'authentication/signup.dart';
+import 'authentication/login.dart';
+import 'mentoring.dart';
 import 'course/courses.dart';
 import 'homepage.dart';
-import 'mentoring.dart';
 import 'competition.dart';
 
-// 2. Ubah main() jadi async & Inisialisasi Supabase
+// 1. Setup Main jadi Async untuk inisialisasi Supabase (Dari Branch Shafwa)
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    // URL dan Key Project kamu (Tadi sudah benar)
+    // URL dan Key Project kamu
     url: 'https://ritybflofnjeerbadjfp.supabase.co',
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpdHliZmxvZm5qZWVyYmFkamZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMzg3ODYsImV4cCI6MjA3OTcxNDc4Nn0.jjs1p3QuTgH0nFEYENbD1bbB9PfoMrQdV5L5P8D0NwI',
@@ -22,7 +24,7 @@ void main() async {
   runApp(const MyApp());
 }
 
-// 3. Variabel Global biar bisa dipanggil di file lain (course.dart, dll)
+// 2. Variabel Global Supabase (Biar bisa dipanggil di mana aja)
 final supabase = Supabase.instance.client;
 
 class MyApp extends StatelessWidget {
@@ -31,122 +33,125 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Champify',
       debugShowCheckedModeBanner: false,
-      title: 'Course App',
       theme: ThemeData(
+        textTheme: GoogleFonts.poppinsTextTheme(),
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.brown),
         useMaterial3: true,
-        textTheme: GoogleFonts.poppinsTextTheme(),
       ),
+      // Halaman awal ke MenuUtama
       home: const MenuUtama(),
+
+      // Routes (Dari branch main - Penting buat navigasi)
+      routes: {
+        '/signup': (context) => const SignUpFormPage(),
+        '/login': (context) => const LoginPage(),
+        '/mentoring': (context) => const ZoomMeetingScreen(),
+        '/courses': (context) => const CoursePage(),
+      },
     );
   }
 }
 
-// Menu Utama (Kode UI kamu yang baru)
+// 3. Menu Utama (Pakai struktur rapi dari branch Main)
 class MenuUtama extends StatelessWidget {
   const MenuUtama({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Aplikasi Belajar")),
+      appBar: AppBar(
+        title: const Text("Menu Debugging / Navigasi"),
+        backgroundColor: Colors.brown[100],
+      ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text(
-              "Selamat Datang!",
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text("Pilih Halaman:"),
+              const SizedBox(height: 20),
 
-            // Tombol ke Homepage
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.brown,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 15,
-                ),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const HomePage()),
-                );
-              },
-              child: const Text("Buka Homepage"),
-            ),
-
-            const SizedBox(height: 15),
-
-            // Tombol ke Mentoring
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE89B8E),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 15,
-                ),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ZoomMeetingScreen(),
+              // Tombol ke Homepage
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.brown,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
                   ),
-                );
-              },
-              child: const Text("Buka Mentoring"),
-            ),
-
-            const SizedBox(height: 15),
-
-            // Tombol ke Course Page
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.brown,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 15,
                 ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HomePage()),
+                  );
+                },
+                child: const Text("Buka Homepage"),
               ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => const CoursePage()),
-                );
-              },
-              child: const Text("Buka Course Page"),
-            ),
 
-            const SizedBox(height: 15),
+              const SizedBox(height: 15),
 
-            // Tombol ke Competition
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 15,
-                ),
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CompetitionListScreen(),
+              // Tombol ke Mentoring
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE89B8E),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
                   ),
-                );
-              },
-              child: const Text("Buka Competition"),
-            ),
-          ],
+                ),
+                onPressed: () {
+                  // Pakai pushNamed karena sudah didaftarkan di routes
+                  Navigator.pushNamed(context, '/mentoring');
+                },
+                child: const Text("Buka Mentoring"),
+              ),
+
+              const SizedBox(height: 15),
+
+              // Tombol ke Course Page
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.brown,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pushNamed(context, '/courses');
+                },
+                child: const Text("Buka Course Page"),
+              ),
+
+              const SizedBox(height: 15),
+
+              // Tombol ke Competition
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const CompetitionListScreen()),
+                  );
+                },
+                child: const Text("Buka Competition"),
+              ),
+            ],
+          ),
         ),
       ),
     );
