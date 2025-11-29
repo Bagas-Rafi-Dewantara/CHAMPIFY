@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // Import Supabase dari branch Shafwa
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Import halaman-halaman
 import 'authentication/signup.dart';
@@ -9,13 +9,13 @@ import 'mentoring.dart';
 import 'course/courses.dart';
 import 'homepage.dart';
 import 'competition.dart';
+import 'settings.dart';
 
-// 1. Setup Main jadi Async untuk inisialisasi Supabase (Dari Branch Shafwa)
+// 1. Setup Main jadi Async untuk inisialisasi Supabase
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await Supabase.initialize(
-    // URL dan Key Project kamu
     url: 'https://ritybflofnjeerbadjfp.supabase.co',
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpdHliZmxvZm5qZWVyYmFkamZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMzg3ODYsImV4cCI6MjA3OTcxNDc4Nn0.jjs1p3QuTgH0nFEYENbD1bbB9PfoMrQdV5L5P8D0NwI',
@@ -24,7 +24,7 @@ void main() async {
   runApp(const MyApp());
 }
 
-// 2. Variabel Global Supabase (Biar bisa dipanggil di mana aja)
+// 2. Variabel Global Supabase
 final supabase = Supabase.instance.client;
 
 class MyApp extends StatelessWidget {
@@ -43,7 +43,7 @@ class MyApp extends StatelessWidget {
       // Halaman awal ke MenuUtama
       home: const MenuUtama(),
 
-      // Routes (Dari branch main - Penting buat navigasi)
+      // Routes
       routes: {
         '/signup': (context) => const SignUpFormPage(),
         '/login': (context) => const LoginPage(),
@@ -54,7 +54,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// 3. Menu Utama (Pakai struktur rapi dari branch Main)
+// 3. Menu Utama
 class MenuUtama extends StatelessWidget {
   const MenuUtama({super.key});
 
@@ -105,7 +105,6 @@ class MenuUtama extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
-                  // Pakai pushNamed karena sudah didaftarkan di routes
                   Navigator.pushNamed(context, '/mentoring');
                 },
                 child: const Text("Buka Mentoring"),
@@ -149,6 +148,27 @@ class MenuUtama extends StatelessWidget {
                   );
                 },
                 child: const Text("Buka Competition"),
+              ),
+              
+              const SizedBox(height: 15),
+              
+              // ← TOMBOL BARU: KE SETTINGS
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE89B8E),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 30,
+                    vertical: 15,
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => SettingsPage()),
+                  );
+                },
+                child: const Text("Buka Settings"),
               ),
             ],
           ),
