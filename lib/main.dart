@@ -1,18 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart'; // Import Supabase dari branch Shafwa
 
-// Import pages
+// Import halaman-halaman
 import 'authentication/signup.dart';
 import 'authentication/login.dart';
 import 'mentoring.dart';
 import 'course/courses.dart';
-// import 'course/playlist_course.dart'; // Un-comment jika dipakai
 import 'homepage.dart';
-import 'competition.dart'; 
+import 'competition.dart';
 
-void main() {
+// 1. Setup Main jadi Async untuk inisialisasi Supabase (Dari Branch Shafwa)
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    // URL dan Key Project kamu
+    url: 'https://ritybflofnjeerbadjfp.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJpdHliZmxvZm5qZWVyYmFkamZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMzg3ODYsImV4cCI6MjA3OTcxNDc4Nn0.jjs1p3QuTgH0nFEYENbD1bbB9PfoMrQdV5L5P8D0NwI',
+  );
+
   runApp(const MyApp());
 }
+
+// 2. Variabel Global Supabase (Biar bisa dipanggil di mana aja)
+final supabase = Supabase.instance.client;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -27,10 +40,10 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.brown),
         useMaterial3: true,
       ),
-      // Set halaman awal ke MenuUtama
+      // Halaman awal ke MenuUtama
       home: const MenuUtama(),
-      
-      // Routes dari branch 'nat' dipindah ke sini (MaterialApp)
+
+      // Routes (Dari branch main - Penting buat navigasi)
       routes: {
         '/signup': (context) => const SignUpFormPage(),
         '/login': (context) => const LoginPage(),
@@ -41,7 +54,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Menu Utama diperbaiki strukturnya (pakai Scaffold)
+// 3. Menu Utama (Pakai struktur rapi dari branch Main)
 class MenuUtama extends StatelessWidget {
   const MenuUtama({super.key});
 
@@ -53,7 +66,7 @@ class MenuUtama extends StatelessWidget {
         backgroundColor: Colors.brown[100],
       ),
       body: Center(
-        child: SingleChildScrollView( // Biar bisa discroll kalau HP kecil
+        child: SingleChildScrollView(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -78,9 +91,9 @@ class MenuUtama extends StatelessWidget {
                 },
                 child: const Text("Buka Homepage"),
               ),
-              
+
               const SizedBox(height: 15),
-              
+
               // Tombol ke Mentoring
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -92,14 +105,14 @@ class MenuUtama extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
-                  // Bisa pakai push manual atau pushNamed karena routes sudah didaftarkan
+                  // Pakai pushNamed karena sudah didaftarkan di routes
                   Navigator.pushNamed(context, '/mentoring');
                 },
                 child: const Text("Buka Mentoring"),
               ),
-              
+
               const SizedBox(height: 15),
-              
+
               // Tombol ke Course Page
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -115,9 +128,9 @@ class MenuUtama extends StatelessWidget {
                 },
                 child: const Text("Buka Course Page"),
               ),
-              
+
               const SizedBox(height: 15),
-              
+
               // Tombol ke Competition
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
@@ -131,7 +144,8 @@ class MenuUtama extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const CompetitionListScreen()),
+                    MaterialPageRoute(
+                        builder: (context) => const CompetitionListScreen()),
                   );
                 },
                 child: const Text("Buka Competition"),
