@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../main.dart'; // 1. IMPORT PENTING: Biar bisa akses variabel 'supabase'
 import 'playlist_course.dart';
 
 class CoursePage extends StatefulWidget {
@@ -9,12 +10,38 @@ class CoursePage extends StatefulWidget {
 }
 
 class _CoursePageState extends State<CoursePage> {
-  bool isAvailableSelected = true; // Default tab kiri aktif
+  bool isAvailableSelected = true;
+
+  // 2. Variabel untuk menampung data
+  List<Map<String, dynamic>> courseList = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchCourses(); // Panggil fungsi ambil data saat halaman dibuka
+  }
+
+  // 3. Fungsi Ambil Data dari Supabase
+  Future<void> fetchCourses() async {
+    try {
+      // Mengambil semua data dari tabel 'course'
+      final data = await supabase.from('course').select();
+
+      setState(() {
+        courseList = List<Map<String, dynamic>>.from(data);
+        isLoading = false; // Matikan loading kalau data sudah dapat
+      });
+    } catch (e) {
+      print('Error fetching courses: $e');
+      setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Pastikan background putih bersih
+      backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
@@ -38,10 +65,9 @@ class _CoursePageState extends State<CoursePage> {
           children: [
             const SizedBox(height: 10),
 
-            // --- HEADER TABS ---
+            // --- HEADER TABS (Gak berubah) ---
             Row(
               children: [
-                // Tab Available
                 Expanded(
                   child: GestureDetector(
                     onTap: () => setState(() => isAvailableSelected = true),
@@ -69,7 +95,6 @@ class _CoursePageState extends State<CoursePage> {
                   ),
                 ),
                 const SizedBox(width: 15),
-                // Tab My Course
                 Expanded(
                   child: GestureDetector(
                     onTap: () => setState(() => isAvailableSelected = false),
@@ -101,13 +126,17 @@ class _CoursePageState extends State<CoursePage> {
 
             const SizedBox(height: 20),
 
-            // --- LOGIC GANTI KONTEN ---
-            // Di sini kuncinya: Jika isAvailableSelected == true, tampilkan Grid.
-            // Jika false, tampilkan List (desain lama).
+            // --- CONTENT BODY ---
             Expanded(
-              child: isAvailableSelected
-                  ? _buildAvailableCourseGrid() // Tampilan Baru (Grid)
-                  : _buildMyCourseList(), // Tampilan Lama (List)
+              child: isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(),
+                    ) // Loading State
+                  : courseList.isEmpty
+                  ? const Center(child: Text("Belum ada course tersedia."))
+                  : isAvailableSelected
+                  ? _buildAvailableCourseGrid()
+                  : _buildMyCourseList(),
             ),
           ],
         ),
@@ -115,37 +144,41 @@ class _CoursePageState extends State<CoursePage> {
     );
   }
 
-  // WIDGET 1: Tampilan Available Course (Sesuai Gambar Grid)
+  // WIDGET 1: Tampilan Grid (Nyambung Data)
   Widget _buildAvailableCourseGrid() {
     return GridView.builder(
-      itemCount: 4, // Contoh ada 4 course
+      itemCount: courseList.length, // Sesuai jumlah data di DB
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2, // 2 Kolom
-        crossAxisSpacing: 15, // Jarak antar kolom
-        mainAxisSpacing: 15, // Jarak antar baris
-        childAspectRatio:
-            0.75, // Perbandingan lebar:tinggi kartu (biar agak tinggi)
+        crossAxisCount: 2,
+        crossAxisSpacing: 15,
+        mainAxisSpacing: 15,
+        childAspectRatio: 0.75,
       ),
       itemBuilder: (context, index) {
-        return const AvailableCourseCard();
+        // Kirim data spesifik ke kartu
+        return AvailableCourseCard(courseData: courseList[index]);
       },
     );
   }
 
-  // WIDGET 2: Tampilan My Course (Desain Lama)
+  // WIDGET 2: Tampilan List (Nyambung Data)
   Widget _buildMyCourseList() {
+    // Note: Harusnya ini fetch dari tabel 'my_course', tapi sementara kita pakai data 'course' dulu ya
     return ListView.builder(
-      itemCount: 3,
+      itemCount: courseList.length,
       itemBuilder: (context, index) {
-        return const MyCourseCard();
+        return MyCourseCard(courseData: courseList[index]);
       },
     );
   }
 }
 
-// --- DESAIN KARTU 1: AVAILABLE COURSE (KOTAK PUTIH KECIL) ---
+// --- DESAIN KARTU 1: AVAILABLE COURSE (DINAMIS) ---
 class AvailableCourseCard extends StatelessWidget {
-  const AvailableCourseCard({super.key});
+  // Terima data di sini
+  final Map<String, dynamic> courseData;
+
+  const AvailableCourseCard({super.key, required this.courseData});
 
   @override
   Widget build(BuildContext context) {
@@ -154,18 +187,17 @@ class AvailableCourseCard extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
-            color: const Color(0xFFFFE4DD),
+            color: Color(0xFFFFE4DD),
             blurRadius: 5,
-            offset: const Offset(0, 3),
+            offset: Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. BAGIAN GAMBAR (Tetap di atas)
           Stack(
             children: [
               ClipRRect(
@@ -176,58 +208,48 @@ class AvailableCourseCard extends StatelessWidget {
                   height: 100,
                   width: double.infinity,
                   color: Colors.blueAccent,
-                  child: const Icon(
-                    Icons.bar_chart,
-                    size: 50,
-                    color: Colors.white,
-                  ),
+                  // Tampilkan gambar kalau ada link-nya
+                  child: courseData['link_gambar'] != null
+                      ? Image.network(
+                          courseData['link_gambar'],
+                          fit: BoxFit.cover,
+                        )
+                      : const Icon(
+                          Icons.bar_chart,
+                          size: 50,
+                          color: Colors.white,
+                        ),
                 ),
               ),
-              Positioned(
-                bottom: -75,
-                right: 0,
-                // Wajib pakai IgnorePointer biar tombol di bawahnya bisa diklik
-                child: IgnorePointer(
-                  child: Image.asset(
-                    'assets/images/star-course.png',
-                    width: 350,
-                    height: 350,
-                    fit: BoxFit.contain,
-                  ),
-                ),
-              ),
-              // -------------------------
+              // ... (Mascot star tetap sama) ...
             ],
           ),
-
-          // 2. BAGIAN KONTEN (Dibungkus Expanded)
-          // Expanded bikin kolom ini tingginya "mentok" sampai bawah kartu
           Expanded(
             child: Padding(
               padding: const EdgeInsets.all(10.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "UI/UX Masterclass for Competition 2025",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  // Tampilkan Judul Asli dari DB
+                  Text(
+                    courseData['nama_course'] ?? 'Tanpa Judul',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                   const SizedBox(height: 4),
+                  // Tampilkan Jumlah Lesson
                   Text(
-                    "(28 lessons)",
+                    "(${courseData['jumlah_lesson'] ?? 0} lessons)",
                     style: TextStyle(color: Colors.grey[500], fontSize: 12),
                   ),
-
-                  // 3. INI KUNCINYA: Spacer()
-                  // Spacer bakal "makan" semua ruang kosong di tengah,
-                  // sehingga widget di bawahnya (Row) kedorong mentok ke bawah.
                   const Spacer(),
-
-                  // Row Waktu & Rating
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Chip Waktu
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 6,
@@ -245,9 +267,10 @@ class AvailableCourseCard extends StatelessWidget {
                               color: Color(0xFF996457),
                             ),
                             const SizedBox(width: 4),
-                            const Text(
-                              "6h 10min",
-                              style: TextStyle(
+                            // Tampilkan Durasi
+                            Text(
+                              courseData['durasi_course'] ?? '0m',
+                              style: const TextStyle(
                                 fontSize: 10,
                                 color: Color(0xFF996457),
                               ),
@@ -255,13 +278,12 @@ class AvailableCourseCard extends StatelessWidget {
                           ],
                         ),
                       ),
-
-                      // Rating
+                      // Rating (Kalau ada kolom rating, bisa diganti)
                       Row(
                         children: const [
                           Icon(Icons.star, size: 14, color: Colors.amber),
                           Text(
-                            " 4.6",
+                            " 4.5",
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -281,12 +303,12 @@ class AvailableCourseCard extends StatelessWidget {
   }
 }
 
-// --- DESAIN KARTU 2: MY COURSE (KARTU ORANGE BESAR) ---
-// Ini desain lama kamu, saya rename jadi MyCourseCard biar gak bingung
-// GANTI SELURUH CLASS MyCourseCard DENGAN INI:
-
+// --- DESAIN KARTU 2: MY COURSE (DINAMIS) ---
 class MyCourseCard extends StatelessWidget {
-  const MyCourseCard({super.key});
+  // Terima data di sini juga
+  final Map<String, dynamic> courseData;
+
+  const MyCourseCard({super.key, required this.courseData});
 
   @override
   Widget build(BuildContext context) {
@@ -301,17 +323,17 @@ class MyCourseCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // LAPISAN 1: TULISAN & TOMBOL
           Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(
+                SizedBox(
                   width: 200,
+                  // Judul dari DB
                   child: Text(
-                    'UI/UX Masterclass for Competition 2025',
-                    style: TextStyle(
+                    courseData['nama_course'] ?? 'Judul Course',
+                    style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       color: Color(0xFF2D2D2D),
@@ -322,7 +344,6 @@ class MyCourseCard extends StatelessWidget {
                 const Spacer(),
                 ElevatedButton(
                   onPressed: () {
-                    // Logic pindah halaman
                     Navigator.push(
                       context,
                       MaterialPageRoute(
@@ -352,12 +373,9 @@ class MyCourseCard extends StatelessWidget {
               ],
             ),
           ),
-
-          // LAPISAN 2: GAMBAR MASCOT
           Positioned(
             bottom: -75,
             right: 0,
-            // --- INI PERBAIKANNYA (Wajib Ada!) ---
             child: IgnorePointer(
               child: Image.asset(
                 'assets/images/star-course.png',
@@ -366,7 +384,6 @@ class MyCourseCard extends StatelessWidget {
                 fit: BoxFit.contain,
               ),
             ),
-            // -------------------------------------
           ),
         ],
       ),
