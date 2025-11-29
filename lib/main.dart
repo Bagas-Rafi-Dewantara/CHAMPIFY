@@ -4,7 +4,8 @@ import 'course/courses.dart';
 import 'course/playlist_course.dart';
 import 'homepage.dart';
 import 'mentoring.dart';
-import 'competition.dart'; // Import competition
+import 'competition.dart';
+import 'settings.dart';
 
 void main() {
   runApp(const MyApp());
@@ -23,7 +24,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         textTheme: GoogleFonts.poppinsTextTheme(),
       ),
-      // Langsung buka homepage
+      // Langsung buka MenuUtama
       home: const MenuUtama(),
     );
   }
@@ -127,6 +128,27 @@ class MenuUtama extends StatelessWidget {
                 );
               },
               child: const Text("Buka Competition"),
+            ),
+            
+            const SizedBox(height: 15),
+            
+            // ← TOMBOL BARU: KE SETTINGS
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE89B8E),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 15,
+                ),
+              ),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => SettingsPage()),
+                );
+              },
+              child: const Text("Buka Settings"),
             ),
           ],
         ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-
+import 'settings.dart'; 
+import 'course/courses.dart';
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 
@@ -201,10 +202,16 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildFeatureItem(Icons.videocam, 'Zoom', const Color(0xFFE8C4A0)),
-                    _buildFeatureItem(Icons.play_circle, 'Course', const Color(0xFFE8C4A0)),
-                    _buildFeatureItem(Icons.article, 'Quiz', const Color(0xFFE8D4A0)),
-                    _buildFeatureItem(Icons.emoji_events, 'Competition', const Color(0xFFE8E4A0)),
+                    _buildFeatureItem(Icons.videocam, 'Zoom', const Color(0xFFE8C4A0), null),
+                    _buildFeatureItem(Icons.play_circle, 'Course', const Color(0xFFE8C4A0), () {
+                      // Klik Course, pindah ke CoursePage
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => CoursePage()),
+                      );
+                    }),
+                    _buildFeatureItem(Icons.article, 'Quiz', const Color(0xFFE8D4A0), null),
+                    _buildFeatureItem(Icons.emoji_events, 'Competition', const Color(0xFFE8E4A0), null),
                   ],
                 ),
                 const SizedBox(height: 30),
@@ -260,30 +267,34 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
+      bottomNavigationBar: _buildBottomNavBar(context, 0),
     );
   }
 
-  Widget _buildFeatureItem(IconData icon, String label, Color color) {
-    return Column(
-      children: [
-        Container(
-          width: 60,
-          height: 60,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: BorderRadius.circular(12),
+  Widget _buildFeatureItem(IconData icon, String label, Color color, VoidCallback? onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, size: 30),
           ),
-          child: Icon(icon, size: 30),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w500,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -507,6 +518,85 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ],
+    );
+  }
+  
+  Widget _buildBottomNavBar(BuildContext context, int activeIndex) {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF5F0),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -5),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _buildNavItem(Icons.home_outlined, 'Home', 0, activeIndex, context),
+            _buildNavItem(Icons.play_circle_outline, 'Course', 1, activeIndex, context),
+            _buildNavItem(Icons.search, 'Search', 2, activeIndex, context),
+            _buildNavItem(Icons.people_outline, 'Community', 3, activeIndex, context),
+            _buildNavItem(Icons.settings, 'Setting', 4, activeIndex, context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index, int activeIndex, BuildContext context) {
+    bool isActive = activeIndex == index;
+    
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          // Kalau klik Setting, pindah ke SettingsPage
+          if (index == 4) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => SettingsPage()),
+            );
+          }
+          // Kalau klik Course, pindah ke CoursePage
+          else if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => CoursePage()),
+            );
+          }
+          // Untuk index lain (0,2,3), belum ada action
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: isActive ? const Color(0xFFE89B8E) : Colors.grey,
+                size: 24,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 10,
+                  color: isActive ? const Color(0xFFE89B8E) : Colors.grey,
+                  fontWeight: FontWeight.w500,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
