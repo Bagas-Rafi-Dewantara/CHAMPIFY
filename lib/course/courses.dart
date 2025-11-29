@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../main.dart'; // 1. IMPORT PENTING: Biar bisa akses variabel 'supabase'
-import 'playlist_course.dart';
+import 'mycourse.dart';
+import 'detail_course.dart';
 
 class CoursePage extends StatefulWidget {
   const CoursePage({super.key});
@@ -175,129 +176,132 @@ class _CoursePageState extends State<CoursePage> {
 
 // --- DESAIN KARTU 1: AVAILABLE COURSE (DINAMIS) ---
 class AvailableCourseCard extends StatelessWidget {
-  // Terima data di sini
   final Map<String, dynamic> courseData;
 
   const AvailableCourseCard({super.key, required this.courseData});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0xFFFFE4DD),
-            blurRadius: 5,
-            offset: Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Stack(
-            children: [
-              ClipRRect(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(15),
+    // 1. Bungkus Container dengan GestureDetector biar bisa diklik
+    return GestureDetector(
+      onTap: () {
+        // 2. Arahkan ke DetailCoursePage saat diklik
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const DetailCoursePage()),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(15),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0xFFFFE4DD),
+              blurRadius: 5,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(15),
+                  ),
+                  child: Container(
+                    height: 100,
+                    width: double.infinity,
+                    color: Colors.blueAccent,
+                    child: courseData['link_gambar'] != null
+                        ? Image.network(
+                            courseData['link_gambar'],
+                            fit: BoxFit.cover,
+                          )
+                        : const Icon(
+                            Icons.bar_chart,
+                            size: 50,
+                            color: Colors.white,
+                          ),
+                  ),
                 ),
-                child: Container(
-                  height: 100,
-                  width: double.infinity,
-                  color: Colors.blueAccent,
-                  // Tampilkan gambar kalau ada link-nya
-                  child: courseData['link_gambar'] != null
-                      ? Image.network(
-                          courseData['link_gambar'],
-                          fit: BoxFit.cover,
-                        )
-                      : const Icon(
-                          Icons.bar_chart,
-                          size: 50,
-                          color: Colors.white,
-                        ),
-                ),
-              ),
-              // ... (Mascot star tetap sama) ...
-            ],
-          ),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Tampilkan Judul Asli dari DB
-                  Text(
-                    courseData['nama_course'] ?? 'Tanpa Judul',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+              ],
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      courseData['nama_course'] ?? 'Tanpa Judul',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-                  // Tampilkan Jumlah Lesson
-                  Text(
-                    "(${courseData['jumlah_lesson'] ?? 0} lessons)",
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                  ),
-                  const Spacer(),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF4D8),
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.access_time,
-                              size: 12,
-                              color: Color(0xFF996457),
-                            ),
-                            const SizedBox(width: 4),
-                            // Tampilkan Durasi
-                            Text(
-                              courseData['durasi_course'] ?? '0m',
-                              style: const TextStyle(
-                                fontSize: 10,
+                    const SizedBox(height: 4),
+                    Text(
+                      "(${courseData['jumlah_lesson'] ?? 0} lessons)",
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    ),
+                    const Spacer(),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF4D8),
+                            borderRadius: BorderRadius.circular(5),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.access_time,
+                                size: 12,
                                 color: Color(0xFF996457),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                courseData['durasi_course'] ?? '0m',
+                                style: const TextStyle(
+                                  fontSize: 10,
+                                  color: Color(0xFF996457),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Row(
+                          children: const [
+                            Icon(Icons.star, size: 14, color: Colors.amber),
+                            Text(
+                              " 4.5",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      // Rating (Kalau ada kolom rating, bisa diganti)
-                      Row(
-                        children: const [
-                          Icon(Icons.star, size: 14, color: Colors.amber),
-                          Text(
-                            " 4.5",
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
