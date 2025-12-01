@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
-import 'settings.dart';
+import 'dart:async';
+
+// Import halaman-halaman
+import 'authentication/signup.dart';
+import 'authentication/login.dart';
+import 'mentoring.dart';
 import 'course/courses.dart';
+import 'homepage.dart';
 import 'competition.dart';
+import 'settings.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -16,9 +23,32 @@ class _HomePageState extends State<HomePage> {
     initialPage: 0,
   );
   int _currentPage = 0;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Auto-slide carousel setiap 3 detik
+    _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
+      if (_currentPage < 2) {
+        _currentPage++;
+      } else {
+        _currentPage = 0;
+      }
+      
+      if (_pageController.hasClients) {
+        _pageController.animateToPage(
+          _currentPage,
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _timer.cancel();
     _pageController.dispose();
     super.dispose();
   }
@@ -27,15 +57,17 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      
+      // BODY APLIKASI
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 100),
+          padding: const EdgeInsets.only(bottom: 100), // Padding bawah agar konten tidak tertutup navbar
           child: Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Section
+                // 1. Header Section
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -70,7 +102,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ],
                     ),
-                    CircleAvatar(
+                    const CircleAvatar(
                       radius: 28,
                       backgroundImage: NetworkImage(
                         'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
@@ -80,7 +112,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 30),
 
-                // Upcoming Meeting Section
+                // 2. Upcoming Meeting Section
                 const Text(
                   'Upcoming Meeting',
                   style: TextStyle(
@@ -151,7 +183,10 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(width: 8),
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          // Navigasi ke Mentoring (Pastikan mentoring.dart ada class MentoringPage)
+                          // Navigator.push(context, MaterialPageRoute(builder: (context) => const MentoringPage()));
+                        },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFFE89B8E),
                           shape: RoundedRectangleBorder(
@@ -177,7 +212,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 30),
 
-                // My Feature Section
+                // 3. My Feature Section
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -205,25 +240,15 @@ class _HomePageState extends State<HomePage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildFeatureItem(Icons.videocam, 'Zoom', const Color(0xFFE8C4A0), null),
-                    _buildFeatureItem(Icons.play_circle, 'Course', const Color(0xFFE8C4A0), () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => CoursePage()),
-                      );
-                    }),
-                    _buildFeatureItem(Icons.article, 'Quiz', const Color(0xFFE8D4A0), null),
-                    _buildFeatureItem(Icons.emoji_events, 'Competition', const Color(0xFFE8E4A0), () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => CompetitionListScreen()),
-                      );
-                    }),
+                    _buildFeatureItem(Icons.videocam, 'Zoom', const Color(0xFFE8C4A0)),
+                    _buildFeatureItem(Icons.play_circle, 'Course', const Color(0xFFE8C4A0)),
+                    _buildFeatureItem(Icons.article, 'Quiz', const Color(0xFFE8D4A0)),
+                    _buildFeatureItem(Icons.emoji_events, 'Competition', const Color(0xFFE8E4A0)),
                   ],
                 ),
                 const SizedBox(height: 30),
 
-                // Courses Section
+                // 4. Courses Section
                 const Text(
                   'Courses',
                   style: TextStyle(
@@ -259,7 +284,7 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 30),
 
-                // Recommended Competition Section
+                // 5. Recommended Competition Section
                 const Text(
                   'Recommended Competition',
                   style: TextStyle(
@@ -269,42 +294,40 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const SizedBox(height: 16),
                 _buildCompetitionCarousel(),
-                const SizedBox(height: 100),
               ],
             ),
           ),
         ),
       ),
       
-      // ← NAVBAR
+      // NAVBAR: PENTING! Letaknya di sini
       bottomNavigationBar: _buildBottomNavBar(context, 0),
     );
   }
 
-  Widget _buildFeatureItem(IconData icon, String label, Color color, VoidCallback? onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        children: [
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, size: 30),
+  // --- WIDGET HELPER METHODS ---
+
+  Widget _buildFeatureItem(IconData icon, String label, Color color) {
+    return Column(
+      children: [
+        Container(
+          width: 60,
+          height: 60,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(12),
           ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
+          child: Icon(icon, size: 30),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -437,10 +460,22 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildCompetitionCarousel() {
-    final List<String> competitions = [
-      'https://images.unsplash.com/photo-1624969862293-b749659ccc4e?w=400&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1569705460033-cfaa4bf9f822?w=400&h=400&fit=crop',
-      'https://images.unsplash.com/photo-1551818255-e6e10975bc17?w=400&h=400&fit=crop',
+    final List<Map<String, String>> competitions = [
+      {
+        'title': 'Inovatik Astratech',
+        'status': 'Closed',
+        'image': 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=500&fit=crop',
+      },
+      {
+        'title': 'Essay HKI Budaya',
+        'status': 'On Going',
+        'image': 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=500&fit=crop',
+      },
+      {
+        'title': 'Design Competition',
+        'status': 'Almost Over',
+        'image': 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&h=500&fit=crop',
+      },
     ];
 
     return SizedBox(
@@ -472,7 +507,11 @@ class _HomePageState extends State<HomePage> {
             },
             child: Opacity(
               opacity: _currentPage == index ? 1.0 : 0.5,
-              child: _buildCompetitionCard(competitions[index]),
+              child: _buildCompetitionCard(
+                competitions[index]['image']!,
+                competitions[index]['title']!,
+                competitions[index]['status']!,
+              ),
             ),
           );
         },
@@ -480,50 +519,103 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _buildCompetitionCard(String imageUrl) {
+  Widget _buildCompetitionCard(String imageUrl, String title, String status) {
+    Color statusColor;
+    Color statusBgColor;
+    
+    if (status == 'Closed') {
+      statusColor = Colors.white;
+      statusBgColor = const Color(0xFFE89B8E);
+    } else if (status == 'On Going') {
+      statusColor = const Color(0xFF2D5F3F);
+      statusBgColor = const Color(0xFFA8D5BA);
+    } else {
+      statusColor = const Color(0xFF8B6914);
+      statusBgColor = const Color(0xFFFFF59D);
+    }
     return Stack(
       children: [
         Container(
           width: 280,
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.shade300,
-                blurRadius: 8,
+                blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.grey.shade300,
-                  child: const Center(
-                    child: Icon(Icons.emoji_events, size: 60),
+            borderRadius: BorderRadius.circular(20),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      color: Colors.grey.shade300,
+                      child: const Center(
+                        child: Icon(Icons.emoji_events, size: 60),
+                      ),
+                    );
+                  },
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withOpacity(0.3),
+                        Colors.transparent,
+                        Colors.black.withOpacity(0.7),
+                      ],
+                    ),
                   ),
-                );
-              },
+                ),
+                Positioned(
+                  left: 20,
+                  bottom: 20,
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      shadows: [
+                        Shadow(
+                          offset: Offset(0, 2),
+                          blurRadius: 4,
+                          color: Colors.black45,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ),
         Positioned(
-          top: 12,
-          right: 12,
+          left: 20,
+          top: 20,
           child: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: statusBgColor,
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(
-              Icons.favorite_border,
-              size: 20,
-              color: Colors.grey,
+            child: Text(
+              status,
+              style: TextStyle(
+                color: statusColor,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ),
@@ -532,33 +624,35 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ========================================
-  // NAVBAR METHODS
+  // NAVBAR FIXED DENGAN NAVIGASI AKTIF
   // ========================================
   
   Widget _buildBottomNavBar(BuildContext context, int activeIndex) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF5F0),
+        color: const Color(0xFFFFF5F0), // Warna background navbar
         borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _buildNavItem(Icons.home_outlined, 'Home', 0, activeIndex, context),
-            _buildNavItem(Icons.play_circle_outline, 'Course', 1, activeIndex, context),
-            _buildNavItem(Icons.search, 'Search', 2, activeIndex, context),
-            _buildNavItem(Icons.emoji_events, 'Competition', 3, activeIndex, context),
-            _buildNavItem(Icons.settings, 'Setting', 4, activeIndex, context),
-          ],
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildNavItem(Icons.home_outlined, 'Home', 0, activeIndex, context),
+              _buildNavItem(Icons.play_circle_outline, 'Course', 1, activeIndex, context),
+              _buildNavItem(Icons.search, 'Search', 2, activeIndex, context),
+              _buildNavItem(Icons.emoji_events, 'Competition', 3, activeIndex, context),
+              _buildNavItem(Icons.settings, 'Setting', 4, activeIndex, context),
+            ],
+          ),
         ),
       ),
     );
@@ -570,24 +664,36 @@ class _HomePageState extends State<HomePage> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
+          // --- LOGIKA PINDAH HALAMAN ---
+          
           if (index == 1) {
+            // 1. Ke Course
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => CoursePage()),
+              MaterialPageRoute(builder: (context) => const CoursePage()),
             );
-          } else if (index == 3) {
+          } 
+          else if (index == 2) {
+            // 2. Ke Search (BARU)
+          } 
+          else if (index == 3) {
+             // 3. Ke Competition (BARU)
+             // Pastikan nama class di competition.dart adalah CompetitionListScreen
             Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => CompetitionListScreen()),
+              context, 
+              MaterialPageRoute(builder: (context) => const CompetitionListScreen())
             );
-          } else if (index == 4) {
+          } 
+          else if (index == 4) {
+            // 4. Ke Setting
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => SettingsPage()),
+              MaterialPageRoute(builder: (context) => const SettingsPage()),
             );
           }
         },
         child: Container(
+          color: Colors.transparent, // Agar mudah diklik
           padding: const EdgeInsets.symmetric(vertical: 8),
           child: Column(
             mainAxisSize: MainAxisSize.min,
