@@ -1,11 +1,16 @@
+// ==================== FILE: lib/competition.dart ====================
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+// Ambil instance Supabase
+final supabase = Supabase.instance.client;
 
 // ==================== MODELS ====================
 
 enum CompetitionStatus { onGoing, almostOver, closed, saved }
 
 class Competition {
-  final String id;
+  final int id;
   final String title;
   final String organizer;
   final String category;
@@ -13,9 +18,10 @@ class Competition {
   final String location;
   final String startDate;
   final String endDate;
-  final String imageUrl; // Nanti diisi URL internet
+  final String imageUrl;
   final CompetitionStatus status;
   final String description;
+  final String registrationLink;
 
   Competition({
     required this.id,
@@ -29,70 +35,85 @@ class Competition {
     required this.imageUrl,
     required this.status,
     required this.description,
+    required this.registrationLink,
   });
+
+  factory Competition.fromJson(Map<String, dynamic> json) {
+    String prizeRange = 'Free';
+    int minFee = json['fee_min'] ?? 0;
+    int maxFee = json['fee_max'] ?? 0;
+
+    String formatCurrency(int number) {
+      return number.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    }
+
+    if (minFee == 0) {
+      prizeRange = 'Free';
+    } else {
+      if (maxFee > minFee) {
+        prizeRange = 'Rp ${formatCurrency(minFee)} - ${formatCurrency(maxFee)}';
+      } else {
+        prizeRange = 'Rp ${formatCurrency(minFee)}';
+      }
+    }
+
+    CompetitionStatus status = CompetitionStatus.onGoing;
+    String statusStr = (json['status'] ?? '').toString().toLowerCase();
+    if (statusStr == 'closed') {
+      status = CompetitionStatus.closed;
+    } else if (statusStr == 'almost over') {
+      status = CompetitionStatus.almostOver;
+    } else if (statusStr == 'on going' || statusStr == 'ongoing') {
+      status = CompetitionStatus.onGoing;
+    }
+
+    String formatDate(dynamic date) {
+      if (date == null) return '-';
+      try {
+        DateTime dt = DateTime.parse(date.toString());
+        String day = dt.day.toString().padLeft(2, '0');
+        String month = dt.month.toString().padLeft(2, '0');
+        return '$day-$month-${dt.year}';
+      } catch (e) {
+        return date.toString();
+      }
+    }
+
+    return Competition(
+      id: json['id_competition'] ?? 0,
+      title: json['title'] ?? 'No Title',
+      organizer: json['organizer'] ?? 'Unknown',
+      category: json['jenjang'] ?? 'Umum',
+      prizeRange: prizeRange,
+      location: json['location'] ?? 'Online',
+      startDate: formatDate(json['start_date']),
+      endDate: formatDate(json['end_date']),
+      imageUrl: json['image_url'] ?? 'https://via.placeholder.com/300x400',
+      status: status,
+      description: json['description'] ?? '',
+      registrationLink: json['registration_link'] ?? '',
+    );
+  }
 }
 
-// ==================== DATA (DUMMY URL INTERNET) ====================
+// ==================== DATA SERVICE ====================
 
-class CompetitionData {
-  static List<Competition> getDummyCompetitions() {
-    return [
-      Competition(
-        id: '1',
-        title: 'Bahaswara',
-        organizer: 'SMA Unggulan Rushd',
-        category: 'SMA / Sederajat',
-        prizeRange: 'Rp 60.000 - 80.000',
-        location: 'Online & Jawa Timur',
-        startDate: '10 Okt',
-        endDate: '17 Nov 2025',
-        // Pake gambar placeholder internet biar ga error
-        imageUrl: 'https://images.unsplash.com/photo-1544531586-fde5298cdd40?q=80&w=200', 
-        status: CompetitionStatus.almostOver,
-        description:
-            'Menjadi Jurnalis Kritis di Era Digital dengan Berani Bersuara. Lomba ini ditujukan untuk mengasah kemampuan jurnalistik siswa.',
-      ),
-      Competition(
-        id: '2',
-        title: 'Inovatik Astratech',
-        organizer: 'Inostik politeknik Astra',
-        category: 'Mahasiswa',
-        prizeRange: 'Rp 25.000 - 100.000',
-        location: 'Online & Jawa Tengah',
-        startDate: '10 Okt',
-        endDate: '12 Nov 2025',
-        imageUrl: 'https://images.unsplash.com/photo-1531482615713-2afd69097998?q=80&w=200',
-        status: CompetitionStatus.closed,
-        description:
-            'Revolusi Logistik: Menuju Digitalisasi, Keberlanjutan, dan Transformasi Bisnis dalam era modern.',
-      ),
-      Competition(
-        id: '3',
-        title: 'Essay HKI Budaya',
-        organizer: 'Fakultas Hukum UNESA',
-        category: 'SMA / Sederajat',
-        prizeRange: 'Rp 60.000 - 80.000',
-        location: 'Online & Jawa Timur',
-        startDate: '10 Okt',
-        endDate: '17 Nov 2025',
-        imageUrl: 'https://images.unsplash.com/photo-1455390582262-044cdead277a?q=80&w=200',
-        status: CompetitionStatus.onGoing,
-        description: 'Hak Kekayaan Intelektual & Budaya Kontemporer. Tuangkan idemu dalam tulisan!',
-      ),
-      Competition(
-        id: '4',
-        title: 'UI/UX Design War',
-        organizer: 'Google Developer',
-        category: 'Umum',
-        prizeRange: 'Rp 1.500.000',
-        location: 'Jakarta',
-        startDate: '1 Des',
-        endDate: '5 Des 2025',
-        imageUrl: 'https://images.unsplash.com/photo-1581291518633-83b4ebd1d83e?q=80&w=200',
-        status: CompetitionStatus.onGoing,
-        description: 'Kompetisi desain aplikasi mobile untuk solusi permasalahan sampah di perkotaan.',
-      ),
-    ];
+class CompetitionService {
+  static Future<List<Competition>> fetchCompetitions() async {
+    try {
+      final response = await supabase
+          .from('competition')
+          .select()
+          .order('start_date', ascending: false);
+
+      return (response as List)
+          .map((json) => Competition.fromJson(json))
+          .toList();
+    } catch (e) {
+      debugPrint('Error fetching competitions: $e');
+      return [];
+    }
   }
 }
 
@@ -148,9 +169,25 @@ class CompetitionListScreen extends StatefulWidget {
 class _CompetitionListScreenState extends State<CompetitionListScreen> {
   CompetitionStatus? selectedFilter;
   List<Competition> savedCompetitions = [];
-  List<Competition> allCompetitions = CompetitionData.getDummyCompetitions();
+  List<Competition> allCompetitions = [];
   String searchQuery = '';
   final TextEditingController searchController = TextEditingController();
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCompetitions();
+  }
+
+  Future<void> _loadCompetitions() async {
+    setState(() => isLoading = true);
+    final competitions = await CompetitionService.fetchCompetitions();
+    setState(() {
+      allCompetitions = competitions;
+      isLoading = false;
+    });
+  }
 
   @override
   void dispose() {
@@ -190,6 +227,8 @@ class _CompetitionListScreenState extends State<CompetitionListScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
+        // --- UBAHAN DISINI ---
+        automaticallyImplyLeading: false, // Menghilangkan tombol back
         title: const Text(
           'Competition',
           style: TextStyle(
@@ -199,142 +238,120 @@ class _CompetitionListScreenState extends State<CompetitionListScreen> {
           ),
         ),
         centerTitle: true,
+        // Actions dihapus agar tombol refresh hilang
       ),
-      body: CustomScrollView(
-        slivers: [
-          // 1. CAROUSEL
-          SliverToBoxAdapter(
-            child: SizedBox(
-              height: 280,
-              child: CompetitionCarousel(competitions: allCompetitions),
-            ),
-          ),
-
-          // 2. STICKY HEADER
-          SliverPersistentHeader(
-            pinned: true,
-            delegate: _StickyHeaderDelegate(
-              searchController: searchController,
-              searchQuery: searchQuery,
-              selectedFilter: selectedFilter,
-              onSearchChanged: (value) => setState(() => searchQuery = value),
-              onClearSearch: () => setState(() {
-                searchController.clear();
-                searchQuery = '';
-              }),
-              onFilterChanged: (status) => setState(() {
-                selectedFilter = selectedFilter == status ? null : status;
-              }),
-            ),
-          ),
-
-          // 3. LIST CONTENT
-          if (showEmptyState)
-            SliverFillRemaining(hasScrollBody: false, child: _buildEmptyStateSaved())
-          else if (filteredCompetitions.isEmpty)
-            SliverFillRemaining(hasScrollBody: false, child: _buildEmptyStateNotFound())
-          else
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final competition = filteredCompetitions[index];
-                  final isSaved = savedCompetitions.contains(competition);
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: CompetitionCard(
-                      competition: competition,
-                      statusColor: CompetitionHelper.getStatusColor(competition.status),
-                      statusText: CompetitionHelper.getStatusText(competition.status),
-                      isSaved: isSaved,
-                      onSaveToggle: () {
-                        setState(() {
-                          if (isSaved) {
-                            savedCompetitions.remove(competition);
-                          } else {
-                            savedCompetitions.add(competition);
-                          }
-                        });
-                      },
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CompetitionDetailScreen(
-                              competition: competition,
-                              isSaved: isSaved,
-                              onSaveToggle: () {
-                                setState(() {
-                                  if (isSaved) {
-                                    savedCompetitions.remove(competition);
-                                  } else {
-                                    savedCompetitions.add(competition);
-                                  }
-                                });
-                              },
-                            ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+          : CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: allCompetitions.isEmpty
+                      ? const SizedBox()
+                      : SizedBox(
+                          height: 280,
+                          child: CompetitionCarousel(competitions: allCompetitions),
+                        ),
+                ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _StickyHeaderDelegate(
+                    searchController: searchController,
+                    searchQuery: searchQuery,
+                    selectedFilter: selectedFilter,
+                    onSearchChanged: (value) => setState(() => searchQuery = value),
+                    onClearSearch: () => setState(() {
+                      searchController.clear();
+                      searchQuery = '';
+                    }),
+                    onFilterChanged: (status) => setState(() {
+                      selectedFilter = selectedFilter == status ? null : status;
+                    }),
+                  ),
+                ),
+                if (showEmptyState)
+                  SliverFillRemaining(hasScrollBody: false, child: _buildEmptyStateSaved())
+                else if (filteredCompetitions.isEmpty)
+                  SliverFillRemaining(hasScrollBody: false, child: _buildEmptyStateNotFound())
+                else
+                  SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final competition = filteredCompetitions[index];
+                        final isSaved = savedCompetitions.contains(competition);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: CompetitionCard(
+                            competition: competition,
+                            statusColor: CompetitionHelper.getStatusColor(competition.status),
+                            statusText: CompetitionHelper.getStatusText(competition.status),
+                            isSaved: isSaved,
+                            onSaveToggle: () {
+                              setState(() {
+                                if (isSaved) {
+                                  savedCompetitions.remove(competition);
+                                } else {
+                                  savedCompetitions.add(competition);
+                                }
+                              });
+                            },
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CompetitionDetailScreen(
+                                    competition: competition,
+                                    isSaved: isSaved,
+                                    onSaveToggle: () {
+                                      setState(() {
+                                        if (isSaved) {
+                                          savedCompetitions.remove(competition);
+                                        } else {
+                                          savedCompetitions.add(competition);
+                                        }
+                                      });
+                                    },
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
+                      childCount: filteredCompetitions.length,
                     ),
-                  );
-                },
-                childCount: filteredCompetitions.length,
-              ),
+                  ),
+                const SliverToBoxAdapter(child: SizedBox(height: 20)),
+              ],
             ),
-          
-          const SliverToBoxAdapter(child: SizedBox(height: 20)),
-        ],
-      ),
-      // --- UPDATE NAVBAR DISINI ---
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        currentIndex: 3, // UBAH KE 3 AGAR HIGHLIGHT DI 'COMPETITION'
+        currentIndex: 3,
         selectedItemColor: Colors.orange,
         unselectedItemColor: Colors.grey,
-
-        // Menyamakan ukuran font saat dipilih dan tidak dipilih
-        selectedFontSize: 10,
-        unselectedFontSize: 10,
-        // Menyamakan ukuran icon
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
         iconSize: 24,
-
         items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home), 
-            label: 'Home'
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.play_circle), 
-            label: 'Course'
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search), 
-            label: 'Search'
-          ),
-          // ITEM YANG DIUBAH: Community -> Competition
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events), // Icon Piala
-            label: 'Competition'
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings), 
-            label: 'Setting'
-          ),
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.play_circle), label: 'Course'),
+          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Search'),
+          BottomNavigationBarItem(icon: Icon(Icons.emoji_events), label: 'Competition'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Setting'),
         ],
       ),
     );
   }
 
   Widget _buildEmptyStateSaved() {
-    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.star, size: 100, color: Colors.yellow.shade300), SizedBox(height: 16), Text('Explore and Saved Competition first!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))]));
+    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.star, size: 100, color: Colors.yellow.shade300), const SizedBox(height: 16), const Text('Explore and Saved Competition first!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))]));
   }
 
   Widget _buildEmptyStateNotFound() {
-    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.search_off, size: 100, color: Colors.grey.shade300), SizedBox(height: 16), Text('No competition found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600)), SizedBox(height: 8), Text('Try different keywords', style: TextStyle(fontSize: 14, color: Colors.grey.shade500))]));
+    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.search_off, size: 100, color: Colors.grey.shade300), const SizedBox(height: 16), Text('No competition found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600)), const SizedBox(height: 8), Text('Try different keywords', style: TextStyle(fontSize: 14, color: Colors.grey.shade500))]));
   }
 }
 
-// ==================== DELEGATES (STICKY HEADER) ====================
+// ==================== DELEGATES ====================
 
 class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   final TextEditingController searchController;
@@ -345,7 +362,7 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Function(CompetitionStatus) onFilterChanged;
 
   _StickyHeaderDelegate({
-    required this.searchController,
+    required this.searchController, 
     required this.searchQuery,
     required this.selectedFilter,
     required this.onSearchChanged,
@@ -414,7 +431,36 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
-// ==================== DETAIL SCREEN ====================
+// ==================== DETAIL SCREEN & FULL SCREEN IMAGE ====================
+
+class FullScreenImagePage extends StatelessWidget {
+  final String imageUrl;
+  const FullScreenImagePage({super.key, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        iconTheme: const IconThemeData(color: Colors.white),
+      ),
+      body: Center(
+        child: InteractiveViewer(
+          panEnabled: true, 
+          minScale: 0.5,
+          maxScale: 4, 
+          child: Image.network(
+            imageUrl,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) =>
+                const Icon(Icons.broken_image, color: Colors.white, size: 50),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class CompetitionDetailScreen extends StatefulWidget {
   final Competition competition;
@@ -484,7 +530,13 @@ class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
           width: double.infinity,
           height: 50,
           child: ElevatedButton(
-            onPressed: statusText == 'Closed' ? null : () {},
+            onPressed: statusText == 'Closed' ? null : () {
+              if (widget.competition.registrationLink.isNotEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Membuka Link: ${widget.competition.registrationLink}')),
+                );
+              }
+            },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade300, disabledBackgroundColor: Colors.grey.shade300, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
             child: Text(statusText == 'Closed' ? 'Competition Closed' : 'Register Now', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
           ),
@@ -504,21 +556,48 @@ class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: double.infinity,
-                height: 300,
-                margin: const EdgeInsets.all(16),
-                decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(16)),
-                // UBAHAN: Pakai Image.network biar ga error aset
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.network(
-                    widget.competition.imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) => Center(child: Icon(Icons.broken_image, size: 80, color: Colors.grey.shade400)),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => FullScreenImagePage(
+                        imageUrl: widget.competition.imageUrl,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.all(16),
+                  child: AspectRatio(
+                    aspectRatio: 2 / 3, 
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300, 
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: Image.network(
+                          widget.competition.imageUrl,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Center(
+                            child: Icon(Icons.broken_image, size: 80, color: Colors.grey.shade400),
+                          ),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
+
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(20),
@@ -538,7 +617,17 @@ class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    Row(children: [const CircleAvatar(radius: 20, backgroundColor: Colors.grey, child: Icon(Icons.person, size: 20, color: Colors.white)), const SizedBox(width: 12), Column(crossAxisAlignment: CrossAxisAlignment.start, children: [const Text('Diselenggarakan oleh', style: TextStyle(fontSize: 11, color: Colors.grey)), Text(widget.competition.organizer, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))])]),
+                    Row(
+                      children: [
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Diselenggarakan oleh', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text(widget.competition.organizer, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))
+                          ],
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 20),
                     DetailRowWidget(icon: Icons.person, text: widget.competition.category),
                     const SizedBox(height: 12),
@@ -571,7 +660,7 @@ class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
   }
 }
 
-// ==================== WIDGETS LAINNYA ====================
+// ==================== WIDGETS ====================
 
 class CompetitionCarousel extends StatefulWidget {
   final List<Competition> competitions;
@@ -626,7 +715,6 @@ class CarouselCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // UBAHAN: Pakai Image.network
             Image.network(competition.imageUrl, fit: BoxFit.cover, errorBuilder: (c,e,s) => Container(color: Colors.grey.shade400, child: const Icon(Icons.image))),
             Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withOpacity(0.3), Colors.black.withOpacity(0.7)]))),
             Positioned(
@@ -686,7 +774,6 @@ class CompetitionCard extends StatelessWidget {
                 Container(
                   width: 110, height: 140,
                   decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(12)),
-                  // UBAHAN: Pakai Image.network
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
                     child: Image.network(competition.imageUrl, fit: BoxFit.cover, errorBuilder: (c,e,s) => Center(child: Icon(Icons.image, size: 40, color: Colors.grey.shade400))),
@@ -698,7 +785,9 @@ class CompetitionCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(children: [const CircleAvatar(radius: 14, backgroundColor: Colors.grey, child: Icon(Icons.person, size: 14, color: Colors.white)), const SizedBox(width: 6), Expanded(child: Text(competition.organizer, style: const TextStyle(fontSize: 11, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis)), GestureDetector(onTap: onSaveToggle, child: Icon(isSaved ? Icons.bookmark : Icons.bookmark_border, color: Colors.black, size: 20))]),
+                        Row(children: [
+                          Expanded(child: Text(competition.organizer, style: const TextStyle(fontSize: 11, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis)), 
+                          GestureDetector(onTap: onSaveToggle, child: Icon(isSaved ? Icons.bookmark : Icons.bookmark_border, color: Colors.black, size: 20))]),
                         const SizedBox(height: 8),
                         Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: statusColor, borderRadius: BorderRadius.circular(12)), child: Text(statusText, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: statusText == 'Closed' ? Colors.red.shade700 : Colors.green.shade700))),
                         const SizedBox(height: 8),
@@ -721,7 +810,17 @@ class CompetitionCard extends StatelessWidget {
               padding: const EdgeInsets.only(top: 12),
               child: SizedBox(
                 width: double.infinity, height: 45,
-                child: ElevatedButton(onPressed: statusText == 'Closed' ? null : () {}, style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade300, disabledBackgroundColor: Colors.grey.shade300, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0), child: Text(statusText == 'Closed' ? 'Competition Closed' : 'Register Now', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white))),
+                child: ElevatedButton(
+                  onPressed: statusText == 'Closed' ? null : () {
+                    if (competition.registrationLink.isNotEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Membuka Link: ${competition.registrationLink}')),
+                      );
+                    }
+                  }, 
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade300, disabledBackgroundColor: Colors.grey.shade300, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0), 
+                  child: Text(statusText == 'Closed' ? 'Competition Closed' : 'Register Now', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white))
+                ),
               ),
             ),
           ],
@@ -730,6 +829,8 @@ class CompetitionCard extends StatelessWidget {
     );
   }
 }
+
+// ==================== HELPER WIDGETS ====================
 
 class FilterChipWidget extends StatelessWidget {
   final String label; final bool isSelected; final VoidCallback onTap;
