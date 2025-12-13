@@ -2,33 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // Import pages
+import 'authentication/welcome_page.dart';
 import 'authentication/signup.dart';
 import 'authentication/login.dart';
 import 'mentoring.dart';
 import 'course/courses.dart';
-// import 'course/playlist_course.dart'; // Un-comment jika dipakai
+import 'course/playlist_course.dart'; // Un-comment jika dipakai
 import 'homepage.dart';
 import 'competition.dart'; 
-
 void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({super. key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Champify',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
+      theme:  ThemeData(
         textTheme: GoogleFonts.poppinsTextTheme(),
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.brown),
+        colorScheme: ColorScheme. fromSeed(seedColor: Colors.brown),
         useMaterial3: true,
       ),
-      // Set halaman awal ke MenuUtama
-      home: const MenuUtama(),
+      // Set halaman awal ke WelcomePage
+      home:  const WelcomePage(),
       
       // Routes dari branch 'nat' dipindah ke sini (MaterialApp)
       routes: {
@@ -36,6 +36,7 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/mentoring': (context) => const ZoomMeetingScreen(),
         '/courses': (context) => const CoursePage(),
+        '/menu': (context) => const MenuUtama(),
       },
     );
   }
@@ -70,7 +71,7 @@ class MenuUtama extends StatelessWidget {
                     vertical: 15,
                   ),
                 ),
-                onPressed: () {
+                onPressed:  () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const HomePage()),
@@ -102,12 +103,12 @@ class MenuUtama extends StatelessWidget {
               
               // Tombol ke Course Page
               ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.brown,
+                style: ElevatedButton. styleFrom(
+                  backgroundColor:  Colors.brown,
                   foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 30,
-                    vertical: 15,
+                    vertical:  15,
                   ),
                 ),
                 onPressed: () {
@@ -129,9 +130,9 @@ class MenuUtama extends StatelessWidget {
                   ),
                 ),
                 onPressed: () {
-                  Navigator.push(
+                  Navigator. push(
                     context,
-                    MaterialPageRoute(builder: (context) => const CompetitionListScreen()),
+                    MaterialPageRoute(builder:  (context) => const CompetitionListScreen()),
                   );
                 },
                 child: const Text("Buka Competition"),
