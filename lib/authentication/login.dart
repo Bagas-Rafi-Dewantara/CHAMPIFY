@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../homepage.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 final supabase = Supabase.instance.client;
@@ -141,24 +140,8 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                  onPressed: () {
-                    if (_usernameController.text.isNotEmpty &&
-                        _passwordController.text.isNotEmpty) {
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Login successful!')),
-                      );
-
-                      Navigator.pushReplacementNamed(context, '/main');
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Please fill all fields'),
-                        ),
-                      );
-                    }
-                  },
-                    style:  ElevatedButton.styleFrom(
+                    onPressed: isLoading ? null : _handleLogin,
+                    style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFFF4B8),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
                       elevation: 0,
