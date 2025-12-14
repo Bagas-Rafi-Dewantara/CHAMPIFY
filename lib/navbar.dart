@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_nav_bar/google_nav_bar.dart'; // Import package baru ini
 
-// Import halaman
+// Import halaman (Pastikan path sesuai)
 import 'homepage.dart';
 import 'course/courses.dart';
 import 'competition.dart';
@@ -16,88 +17,72 @@ class Navbar extends StatefulWidget {
 class _NavbarState extends State<Navbar> {
   int _selectedIndex = 0;
 
-  // Daftar Halaman (Search dihapus, Total 4 halaman)
+  // Daftar Halaman
   final List<Widget> _pages = [
-    const HomePage(), // Index 0
-    const CoursePage(), // Index 1
-    const CompetitionListScreen(), // Index 2
-    const SettingsPage(), // Index 3 (Halaman Settings Asli)
+    const HomePage(),
+    const CoursePage(),
+    const CompetitionListScreen(),
+    const SettingsPage(),
   ];
 
-  void _onItemTapped(int index) {
-    // LOGIKA STANDAR: Langsung ganti halaman di dalam Navbar
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
+  // Warna tema kamu
+  final Color _themeColor = const Color(0xFFE89B8E);
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      extendBody: true,
+      body: _pages[_selectedIndex],
 
-      // Body menggunakan IndexedStack agar state halaman tersimpan
-      body: IndexedStack(index: _selectedIndex, children: _pages),
-
-      // Navbar Custom
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFFFFF5F0),
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(30), // Lebih membulat
           boxShadow: [
             BoxShadow(
+              blurRadius: 20,
               color: Colors.black.withOpacity(0.1),
-              blurRadius: 10,
-              offset: const Offset(0, -5),
+              offset: const Offset(0, 10),
             ),
           ],
         ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(Icons.home_outlined, 'Home', 0),
-                _buildNavItem(Icons.play_circle_outline, 'Course', 1),
-                _buildNavItem(Icons.emoji_events, 'Competition', 2),
-                _buildNavItem(
-                  Icons.settings,
-                  'Setting',
-                  3,
-                ), // Sekarang akan membuka SettingsPage
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+        // Margin luarnya dikecilin biar bar-nya lebih lebar & muat banyak
+        margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
 
-  Widget _buildNavItem(IconData icon, String label, int index) {
-    bool isActive = _selectedIndex == index;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () => _onItemTapped(index),
-        behavior: HitTestBehavior.opaque,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isActive ? const Color(0xFFE89B8E) : Colors.grey,
-              size: 24,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                color: isActive ? const Color(0xFFE89B8E) : Colors.grey,
-                fontWeight: FontWeight.w500,
+        child: Padding(
+          // Padding container diperkecil
+          padding: const EdgeInsets.all(5),
+          child: GNav(
+            rippleColor: Colors.grey[300]!,
+            hoverColor: Colors.grey[100]!,
+            gap: 4, // Jarak icon ke text didempetin dikit
+            activeColor: Colors.white,
+            iconSize:27,
+
+            // INI KUNCINYA: Padding dalam tombol dikurangi drastis (tadi 20, skrg 10)
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+
+            duration: const Duration(milliseconds: 400),
+            tabBackgroundColor: _themeColor,
+            color: Colors.grey[500],
+
+            tabs: const [
+              GButton(icon: Icons.home_rounded, text: 'Home'),
+              GButton(icon: Icons.play_circle_fill_rounded, text: 'Course'),
+              GButton(
+                icon: Icons.emoji_events_rounded,
+                text: 'Competition', // Teks dipendekin dikit
               ),
-            ),
-          ],
+              GButton(icon: Icons.settings_rounded, text: 'Setting'),
+            ],
+            selectedIndex: _selectedIndex,
+            onTabChange: (index) {
+              setState(() {
+                _selectedIndex = index;
+              });
+            },
+          ),
         ),
       ),
     );

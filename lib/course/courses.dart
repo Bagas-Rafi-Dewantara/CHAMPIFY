@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../main.dart'; // Import buat akses 'supabase'
-import 'detail_course.dart';
+import '../main.dart'; // Akses supabase
+import 'detail_course.dart'; // Pastikan file ini ada
+import 'mycourse.dart'; // <--- IMPORT PENTING
 
 class CoursePage extends StatefulWidget {
   const CoursePage({super.key});
@@ -22,13 +23,17 @@ class _CoursePageState extends State<CoursePage> {
 
   Future<void> fetchCourses() async {
     try {
-      final data = await supabase.from('course').select();
+      // PERUBAHAN ADA DI SINI:
+      // '*, mentor(*)' artinya: Ambil semua kolom course, DAN gabungkan dengan tabel mentor
+      final data = await supabase
+          .from('course')
+          .select('*, mentor(*), playlist(*), rating(*, pengguna(*))');
       setState(() {
         courseList = List<Map<String, dynamic>>.from(data);
         isLoading = false;
       });
     } catch (e) {
-      print('Error fetching courses: $e');
+      debugPrint('Error fetching courses: $e');
       setState(() => isLoading = false);
     }
   }
@@ -41,7 +46,7 @@ class _CoursePageState extends State<CoursePage> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        automaticallyImplyLeading: false, // PENTING: Matikan tombol back
+        automaticallyImplyLeading: false,
         title: const Text(
           'Course',
           style: TextStyle(
@@ -56,7 +61,7 @@ class _CoursePageState extends State<CoursePage> {
         child: Column(
           children: [
             const SizedBox(height: 10),
-            // Header Tabs
+            // --- HEADER TABS ---
             Row(
               children: [
                 Expanded(
@@ -115,7 +120,8 @@ class _CoursePageState extends State<CoursePage> {
               ],
             ),
             const SizedBox(height: 20),
-            // Content
+
+            // --- CONTENT BODY ---
             Expanded(
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -137,6 +143,7 @@ class _CoursePageState extends State<CoursePage> {
                   : ListView.builder(
                       itemCount: courseList.length,
                       itemBuilder: (context, index) =>
+                          // Mengambil Widget dari mycourse.dart
                           MyCourseCard(courseData: courseList[index]),
                     ),
             ),
@@ -147,7 +154,8 @@ class _CoursePageState extends State<CoursePage> {
   }
 }
 
-// --- Card Components (Gunakan kode yang sama seperti sebelumnya) ---
+// Card untuk Available Course (Tetap di sini atau dipisah boleh)
+// Card untuk Available Course
 class AvailableCourseCard extends StatelessWidget {
   final Map<String, dynamic> courseData;
   const AvailableCourseCard({super.key, required this.courseData});
@@ -157,7 +165,9 @@ class AvailableCourseCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const DetailCoursePage()),
+        MaterialPageRoute(
+          builder: (context) => DetailCoursePage(courseData: courseData),
+        ),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -175,6 +185,7 @@ class AvailableCourseCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Bagian Gambar
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(15),
@@ -191,51 +202,32 @@ class AvailableCourseCard extends StatelessWidget {
                     : const Icon(Icons.bar_chart, color: Colors.white),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    courseData['nama_course'] ?? 'Tanpa Judul',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+
+            // Bagian Teks Judul & Lesson
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      courseData['nama_course'] ?? 'Tanpa Judul',
+                      // Hapus maxLines dan overflow agar turun ke bawah (wrap)
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                  Text(
-                    "(${courseData['jumlah_lesson'] ?? 0} lessons)",
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      "(${courseData['jumlah_lesson'] ?? 0} lessons)",
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class MyCourseCard extends StatelessWidget {
-  final Map<String, dynamic> courseData;
-  const MyCourseCard({super.key, required this.courseData});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      height: 100,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFDAB9),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Center(
-        child: Text(
-          courseData['nama_course'] ?? 'Course',
-          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
     );
