@@ -23,27 +23,60 @@ class _HomePageState extends State<HomePage> {
   List<Map<String, dynamic>> _courseList = [];
   bool _isLoadingCourses = true;
 
+  // --- STATE UNTUK DATA COMPETITION BARU ---
+  List<Map<String, dynamic>> _competitionList = [];
+  bool _isLoadingCompetitions = true;
+
+  // --- STATE UNTUK DATA MEETING ---
+  Map<String, dynamic>? _upcomingMeeting;
+  bool _isLoadingMeeting = true;
+
+  // --- STATE UNTUK DATA PENGGUNA (HEADER) ---
+  String _userName = 'Pengguna'; // Default name
+  bool _isUserLoading = true;
+
   @override
   void initState() {
     super.initState();
     // Panggil fungsi fetch data saat halaman dibuka
     _fetchHomeCourses();
+    _fetchHomeCompetitions();
+    _fetchUpcomingMeeting();
+    _fetchUserData();
 
     // Timer untuk Carousel
     _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
-      if (_currentPage < 2) {
-        _currentPage++;
-      } else {
-        _currentPage = 0;
-      }
-      if (_pageController.hasClients) {
-        _pageController.animateToPage(
-          _currentPage,
-          duration: const Duration(milliseconds: 500),
-          curve: Curves.easeInOut,
-        );
+      // Menggunakan panjang list kompetisi yang dinamis
+      int totalItems = _competitionList.length; 
+      if (totalItems > 0) {
+        if (_currentPage < totalItems - 1) {
+          _currentPage++;
+        } else {
+          _currentPage = 0;
+        }
+        if (_pageController.hasClients) {
+          _pageController.animateToPage(
+            _currentPage,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeInOut,
+          );
+        }
       }
     });
+  }
+
+  // --- UTILITY FUNCTION (BISA DIPANGGIL DARI DALAM CLASS) ---
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      const List<String> monthNames = [
+        '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
+        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      ];
+      return '${date.day} ${monthNames[date.month]} ${date.year}';
+    } catch (e) {
+      return 'Tanggal tidak valid';
+    }
   }
 
   // --- LOGIKA AMBIL DATA DARI SUPABASE ---
@@ -66,6 +99,168 @@ class _HomePageState extends State<HomePage> {
       debugPrint('Error fetching home courses: $e');
       if (mounted) {
         setState(() => _isLoadingCourses = false);
+      }
+    }
+  }
+
+  // --- LOGIKA BARU: AMBIL DATA COMPETITION DARI SUPABASE (PERBAIKAN FINAL) ---
+  Future<void> _fetchHomeCompetitions() async {
+    try {
+      // PERBAIKAN: Menggunakan .or() untuk menggantikan .in_()
+      // Ini memfilter data di mana status SAMA DENGAN 'ongoing' ATAU 'almost over'.
+      // Pastikan nilai status di database Anda adalah TEKS lowercase: 'ongoing' dan 'almost over'
+      final allActiveData = await supabase
+          .from('competition')
+          .select('*')
+          .or('status.eq.ongoing,status.eq.almost over') // <--- PERBAIKAN UTAMA DI SINI
+          .order('end_date', ascending: true) 
+          .limit(5);
+
+      // Filter untuk memisahkan 2 Almost Over dan 3 On Going (berdasarkan urutan tanggal)
+      final List<Map<String, dynamic>> combinedData = List<Map<String, dynamic>>.from(allActiveData);
+      
+      // Logika untuk menentukan status tampilan
+      if (mounted) {
+        setState(() {
+          _competitionList = combinedData.map((comp) {
+            final String dbStatus = comp['status'].toString().toLowerCase(); 
+            // Cek kolom image_url dulu, jika kosong, pakai kolom poster
+            final String imageUrl = comp['image_url'] ?? comp['poster'] ?? ''; 
+
+            String displayStatus;
+            if (dbStatus == 'almost over') {
+              displayStatus = 'Almost Over';
+            } else if (dbStatus == 'ongoing') {
+              displayStatus = 'On Going';
+            } else {
+              // Default jika ada status lain yang terambil
+              displayStatus = 'On Going';
+            }
+            
+            return {
+              ...comp,
+              'image_url_final': imageUrl, // Tambahkan kunci untuk gambar yang pasti ada
+              'display_status': displayStatus,
+            };
+          }).toList();
+
+          _isLoadingCompetitions = false;
+          
+          // Atur ulang PageController jika list tidak kosong
+          if (_competitionList.isNotEmpty) {
+            _currentPage = 0; // Reset ke halaman pertama
+          }
+
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching home competitions: $e');
+      if (mounted) {
+        setState(() => _isLoadingCompetitions = false);
+      }
+    }
+  }
+
+  // --- LOGIKA PERBAIKAN FINAL (Mengambil Semua Data lalu Filter di Flutter) ---
+  Future<void> _fetchUpcomingMeeting() async {
+    try {
+      // Ambil data yang tersisa (termasuk yang 2026) tanpa filter tanggal yang ketat.
+      // Kita ambil semua data dan filter di sisi Flutter
+      final data = await supabase
+          .from('zoom')
+          .select('*, mentor(*)') 
+          .limit(10); // Ambil lebih banyak data (atau semua jika tidak terlalu banyak)
+
+      // --- TAMBAHKAN DEBUGGING INI ---
+      debugPrint('Supabase data received: $data');
+
+      if (mounted) {
+        setState(() {
+          if (data.isNotEmpty) {
+            // 1. Filter: Hanya ambil meeting yang tanggalnya di masa depan atau hari ini
+            final List<Map<String, dynamic>> futureMeetings = data.where((m) {
+              try {
+                // Pastikan kolom 'date' tidak null
+                if (m['date'] == null) return false;
+                
+                final meetingDate = DateTime.parse(m['date']);
+                // Gunakan isAfter(yesterday) untuk menyertakan hari ini (00:00:00)
+                final yesterday = DateTime.now().subtract(const Duration(hours: 24));
+                
+                return meetingDate.isAfter(yesterday); 
+              } catch (e) {
+                debugPrint('Error parsing date for meeting: ${m['date']}');
+                return false;
+              }
+            }).toList();
+
+            // 2. Sort: Urutkan berdasarkan tanggal terdekat
+            if (futureMeetings.isNotEmpty) {
+              futureMeetings.sort((a, b) {
+                // Perbandingan tanggal wajib dilakukan di sini
+                final dateA = DateTime.parse(a['date']);
+                final dateB = DateTime.parse(b['date']);
+                return dateA.compareTo(dateB);
+              });
+              
+              _upcomingMeeting = futureMeetings.first;
+            } else {
+              _upcomingMeeting = null;
+            }
+            
+          } else {
+            _upcomingMeeting = null; 
+          }
+          _isLoadingMeeting = false;
+        });
+      }
+    } catch (e) {
+      // Jika masih ada error di sini, kemungkinan masalah koneksi atau RLS
+      debugPrint('Critical Error fetching upcoming meeting: $e');
+      if (mounted) {
+        setState(() => _isLoadingMeeting = false);
+      }
+    }
+  }
+
+  // --- LOGIKA BARU: AMBIL NAMA PENGGUNA DARI SUPABASE ---
+  Future<void> _fetchUserData() async {
+    // *ASUMSI: Anda sudah memiliki ID pengguna yang sedang login*
+    // Contoh jika menggunakan Supabase Auth:
+    final currentUserId = supabase.auth.currentUser?.id; 
+
+    if (currentUserId == null) {
+      if (mounted) {
+        setState(() {
+          _isUserLoading = false;
+          // Biarkan _userName tetap 'Pengguna' (default) jika belum login
+        });
+      }
+      return;
+    }
+
+    try {
+      // Ambil data dari tabel 'pengguna' berdasarkan ID pengguna yang sedang login
+      final data = await supabase
+          .from('pengguna')
+          .select('full_name') // Hanya ambil kolom full_name
+          .eq('id_pengguna', currentUserId) // Asumsi kolom ID di tabel 'pengguna' bernama 'id_pengguna'
+          .single(); // Ambil hanya satu baris
+
+      if (mounted) {
+        setState(() {
+          final String fullName = data['full_name'] ?? 'Pengguna';
+          _userName = fullName;
+          _isUserLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching user data: $e');
+      if (mounted) {
+        setState(() {
+          _isUserLoading = false;
+          _userName = 'Pengguna (Gagal Load)';
+        });
       }
     }
   }
@@ -131,10 +326,18 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ========================================
-  // HEADER SECTION
-  // ========================================
+// HEADER SECTION (SUDAH DINAMIS)
+// ========================================
 
   Widget _buildHeader() {
+    // Tampilkan loading sebentar jika data pengguna sedang diambil
+    if (_isUserLoading) {
+      return const SizedBox(
+        height: 60,
+        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -142,11 +345,12 @@ class _HomePageState extends State<HomePage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
-              children: const [
-                Text('Hello, ', style: TextStyle(fontSize: 24)),
+              children: [
+                const Text('Hello, ', style: TextStyle(fontSize: 24)),
                 Text(
-                  'Divavor Permata',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  // Menggunakan state _userName yang sudah dimuat dari DB
+                  _userName, 
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
@@ -168,12 +372,58 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ========================================
-  // UPCOMING MEETING SECTION
+  // UPCOMING MEETING SECTION (SUDAH DINAMIS)
   // ========================================
 
   Widget _buildUpcomingMeeting() {
+    // 1. Tampilkan Loading
+    if (_isLoadingMeeting) {
+      return Container(
+        height: 80,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+      );
+    }
+
+    // 2. Jika tidak ada meeting yang akan datang
+    if (_upcomingMeeting == null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: const Center(
+          child: Text(
+            'Tidak ada jadwal meeting terdekat.',
+            style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    // 3. Ekstrak data yang akan ditampilkan
+    final Map<String, dynamic> meeting = _upcomingMeeting!;
+    final String meetingTitle = meeting['nama_zoom'] ?? 'Diskusi Bersama Mentor'; // Menggunakan nama_zoom
+    // PERBAIKAN: Mengambil data dari kunci 'date'
+    final String tanggal = meeting['date'] != null 
+        ? _formatDate(meeting['date']) 
+        : 'Tanggal tidak diketahui';
+    final String waktu = (meeting['waktu_mulai'] ?? '-') + ' - ' + (meeting['waktu_selesai'] ?? '-') + ' WIB';
+    final String zoomLink = meeting['link_zoom'] ?? '';
+    
     return GestureDetector(
       onTap: () {
+        // Navigasi ke ZoomMeetingScreen atau buka link zoom
+        if (zoomLink.isNotEmpty) {
+          // Anda bisa menggunakan url_launcher di sini untuk membuka link
+          // Tapi untuk konsistensi, kita navigasi ke ZoomMeetingScreen seperti kode lama
+        }
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const ZoomMeetingScreen()),
@@ -201,21 +451,21 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Discuss with mentor',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  Text(
+                    meetingTitle, // <--- DINAMIS
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 8,
-                    children: const [
+                    children: [
                       Text(
-                        '30 Juli 2024',
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                        tanggal, // <--- DINAMIS
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
                       ),
                       Text(
-                        '19.00-21.00 WIB',
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                        waktu, // <--- DINAMIS
+                        style: const TextStyle(fontSize: 11, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -381,7 +631,7 @@ class _HomePageState extends State<HomePage> {
     // 1. Tampilkan Loading jika data belum siap
     if (_isLoadingCourses) {
       return const SizedBox(
-        height: 280,
+        height: 320,
         child: Center(child: CircularProgressIndicator()),
       );
     }
@@ -396,7 +646,7 @@ class _HomePageState extends State<HomePage> {
 
     // 3. Tampilkan List Data Asli
     return SizedBox(
-      height: 280, // Tinggi container disesuaikan
+      height: 320, // Tinggi container disesuaikan
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
@@ -613,35 +863,36 @@ class _HomePageState extends State<HomePage> {
   // COMPETITION CAROUSEL
   // ========================================
 
-  Widget _buildCompetitionCarousel() {
-    final List<Map<String, String>> competitions = [
-      {
-        'title': 'Inovatik Astratech',
-        'status': 'Closed',
-        'image':
-            'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=500&fit=crop',
-      },
-      {
-        'title': 'Essay HKI Budaya',
-        'status': 'On Going',
-        'image':
-            'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=500&fit=crop',
-      },
-      {
-        'title': 'Design Competition',
-        'status': 'Almost Over',
-        'image':
-            'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&h=500&fit=crop',
-      },
-    ];
+Widget _buildCompetitionCarousel() {
+    // 1. Tampilkan Loading
+    if (_isLoadingCompetitions) {
+      return const SizedBox(
+        height: 320,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    // 2. Tampilkan pesan jika data kosong
+    if (_competitionList.isEmpty) {
+      return const SizedBox(
+        height: 100,
+        child: Center(child: Text("Belum ada kompetisi yang sedang berlangsung.")),
+      );
+    }
 
+    // 3. Tampilkan Carousel dengan data dinamis
     return SizedBox(
       height: 320,
       child: PageView.builder(
         controller: _pageController,
         onPageChanged: (p) => setState(() => _currentPage = p),
-        itemCount: competitions.length,
+        itemCount: _competitionList.length, // <--- Jumlah item dari data DB
         itemBuilder: (context, index) {
+          final competition = _competitionList[index]; // Ambil data
+          final String imageUrl = competition['image_url'] ?? competition['poster'] ?? ''; // Ambil link gambar dari kolom DB
+          final String title = competition['title'] ?? 'No Title';
+          final String status = competition['display_status'] ?? 'Closed'; // Status yang sudah dihitung
+
           return AnimatedBuilder(
             animation: _pageController,
             builder: (context, child) {
@@ -662,10 +913,11 @@ class _HomePageState extends State<HomePage> {
               opacity: _currentPage == index ? 1.0 : 0.5,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                // Kirim data yang sudah diekstrak ke card
                 child: _buildCompetitionCard(
-                  competitions[index]['image']!,
-                  competitions[index]['title']!,
-                  competitions[index]['status']!,
+                  imageUrl,
+                  title,
+                  status,
                 ),
               ),
             ),
@@ -705,7 +957,7 @@ class _HomePageState extends State<HomePage> {
           fit: StackFit.expand,
           children: [
             Image.network(
-              imageUrl,
+              imageUrl, // Menggunakan imageUrl dinamis
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
@@ -733,7 +985,7 @@ class _HomePageState extends State<HomePage> {
               bottom: 20,
               left: 20,
               child: Text(
-                title,
+                title, // Menggunakan title dinamis
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 22,
@@ -761,7 +1013,7 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  status,
+                  status, // Menggunakan status dinamis
                   style: TextStyle(
                     color: statusColor,
                     fontSize: 13,
