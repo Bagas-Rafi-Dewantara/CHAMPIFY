@@ -1,3 +1,4 @@
+import 'package:champify/authentication/welcome_page.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -5,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // Import halaman-halaman
 import 'authentication/signup.dart';
 import 'authentication/login.dart';
+import 'authentication/welcome_page.dart';
 import 'mentoring.dart';
 import 'course/courses.dart';
 import 'homepage.dart';
@@ -40,8 +42,8 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.brown),
         useMaterial3: true,
       ),
-      // Halaman awal ke MenuUtama
-      home: const MenuUtama(),
+      // Halaman awal ke WelcomePage
+      home: const WelcomePage(),
 
       // Routes
       routes: {
@@ -49,6 +51,8 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginPage(),
         '/mentoring': (context) => const ZoomMeetingScreen(),
         '/courses': (context) => const CoursePage(),
+        '/welcome_page': (context) => const WelcomePage(),
+        '/homepage': (context) => const HomePage(),
       },
     );
   }
