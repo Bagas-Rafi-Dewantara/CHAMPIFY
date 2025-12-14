@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../main.dart'; // Import buat akses 'supabase'
-import 'detail_course.dart';
+import '../main.dart'; // Akses supabase
+import 'detail_course.dart'; // Pastikan file ini ada
+import 'mycourse.dart'; // <--- IMPORT PENTING
 
 class CoursePage extends StatefulWidget {
   const CoursePage({super.key});
@@ -28,7 +29,7 @@ class _CoursePageState extends State<CoursePage> {
         isLoading = false;
       });
     } catch (e) {
-      print('Error fetching courses: $e');
+      debugPrint('Error fetching courses: $e');
       setState(() => isLoading = false);
     }
   }
@@ -41,7 +42,7 @@ class _CoursePageState extends State<CoursePage> {
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
-        automaticallyImplyLeading: false, // PENTING: Matikan tombol back
+        automaticallyImplyLeading: false,
         title: const Text(
           'Course',
           style: TextStyle(
@@ -56,7 +57,7 @@ class _CoursePageState extends State<CoursePage> {
         child: Column(
           children: [
             const SizedBox(height: 10),
-            // Header Tabs
+            // --- HEADER TABS ---
             Row(
               children: [
                 Expanded(
@@ -115,7 +116,8 @@ class _CoursePageState extends State<CoursePage> {
               ],
             ),
             const SizedBox(height: 20),
-            // Content
+
+            // --- CONTENT BODY ---
             Expanded(
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
@@ -137,6 +139,7 @@ class _CoursePageState extends State<CoursePage> {
                   : ListView.builder(
                       itemCount: courseList.length,
                       itemBuilder: (context, index) =>
+                          // Mengambil Widget dari mycourse.dart
                           MyCourseCard(courseData: courseList[index]),
                     ),
             ),
@@ -147,7 +150,7 @@ class _CoursePageState extends State<CoursePage> {
   }
 }
 
-// --- Card Components (Gunakan kode yang sama seperti sebelumnya) ---
+// Card untuk Available Course (Tetap di sini atau dipisah boleh)
 class AvailableCourseCard extends StatelessWidget {
   final Map<String, dynamic> courseData;
   const AvailableCourseCard({super.key, required this.courseData});
@@ -213,29 +216,6 @@ class AvailableCourseCard extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class MyCourseCard extends StatelessWidget {
-  final Map<String, dynamic> courseData;
-  const MyCourseCard({super.key, required this.courseData});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      height: 100,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFDAB9),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Center(
-        child: Text(
-          courseData['nama_course'] ?? 'Course',
-          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
       ),
     );
