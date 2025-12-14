@@ -4,11 +4,13 @@ import 'dart:async';
 // Import halaman-halaman
 import 'authentication/signup.dart';
 import 'authentication/login.dart';
+import 'authentication/welcome_page.dart';
 import 'mentoring.dart';
 import 'course/courses.dart';
 import 'homepage.dart';
 import 'competition.dart';
 import 'settings.dart';
+
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);

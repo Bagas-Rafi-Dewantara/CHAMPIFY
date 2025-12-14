@@ -193,25 +193,23 @@ class _LoginPageState extends State<LoginPage> {
                   width: double.infinity,
                   height: 56,
                   child: ElevatedButton(
-                    onPressed: () {
-                      // Handle login
-                      if (_usernameController.text. isNotEmpty &&
-                          _passwordController.text.isNotEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Login successful!'),
-                          ),
-                        );
-                        // Navigate to home or main app
-                        // Navigator.pushReplacementNamed(context, '/home');
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Please fill all fields'),
-                          ),
-                        );
-                      }
-                    },
+                  onPressed: () {
+                    if (_usernameController.text.isNotEmpty &&
+                        _passwordController.text.isNotEmpty) {
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Login successful!')),
+                      );
+
+                      Navigator.pushReplacementNamed(context, '/homepage');
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Please fill all fields'),
+                        ),
+                      );
+                    }
+                  },
                     style:  ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFFF4B8),
                       shape: RoundedRectangleBorder(
