@@ -1,14 +1,11 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../main.dart'; // <--- PENTING: Untuk akses variabel 'supabase'
 import 'mentoring.dart';
 import 'course/detail_course.dart';
-import 'competition.dart';
+import 'competition.dart' hide supabase;
 import 'course/courses.dart';
 import 'course/mycourse_quiz.dart';
-import 'course/detail_course.dart';
-import 'services/course_service.dart';
-import 'models/course_model.dart';
-
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -22,9 +19,17 @@ class _HomePageState extends State<HomePage> {
   int _currentPage = 0;
   late Timer _timer;
 
+  // --- STATE UNTUK DATA COURSE ---
+  List<Map<String, dynamic>> _courseList = [];
+  bool _isLoadingCourses = true;
+
   @override
   void initState() {
     super.initState();
+    // Panggil fungsi fetch data saat halaman dibuka
+    _fetchHomeCourses();
+
+    // Timer untuk Carousel
     _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
       if (_currentPage < 2) {
         _currentPage++;
@@ -39,6 +44,30 @@ class _HomePageState extends State<HomePage> {
         );
       }
     });
+  }
+
+  // --- LOGIKA AMBIL DATA DARI SUPABASE ---
+  Future<void> _fetchHomeCourses() async {
+    try {
+      // Ambil data course (limit 5 aja buat homepage biar ringan)
+      // Include mentor, playlist, dan rating seperti di courses.dart
+      final data = await supabase
+          .from('course')
+          .select('*, mentor(*), playlist(*), rating(*, pengguna(*))')
+          .limit(5);
+
+      if (mounted) {
+        setState(() {
+          _courseList = List<Map<String, dynamic>>.from(data);
+          _isLoadingCourses = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching home courses: $e');
+      if (mounted) {
+        setState(() => _isLoadingCourses = false);
+      }
+    }
   }
 
   @override
@@ -77,13 +106,13 @@ class _HomePageState extends State<HomePage> {
                 _buildFeatureSection(),
                 const SizedBox(height: 30),
 
-                // 4. Courses Preview
+                // 4. Courses Preview (DATA ASLI)
                 const Text(
                   'Courses',
                   style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-                _buildCoursesList(),
+                _buildCoursesList(), // <--- List ini sekarang dinamis
                 const SizedBox(height: 30),
 
                 // 5. Competition Carousel
@@ -98,16 +127,13 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       ),
-      
-      // HAPUS NAVBAR - Pakai dari navbar.dart
-      // bottomNavigationBar: _buildBottomNavBar(context, 0),
     );
   }
 
   // ========================================
   // HEADER SECTION
   // ========================================
-  
+
   Widget _buildHeader() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -144,12 +170,14 @@ class _HomePageState extends State<HomePage> {
   // ========================================
   // UPCOMING MEETING SECTION
   // ========================================
-  
+
   Widget _buildUpcomingMeeting() {
     return GestureDetector(
       onTap: () {
-        // Navigasi ke ZoomMeetingScreen
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const ZoomMeetingScreen()));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ZoomMeetingScreen()),
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(12),
@@ -196,8 +224,12 @@ class _HomePageState extends State<HomePage> {
             ),
             ElevatedButton(
               onPressed: () {
-                // Navigasi ke ZoomMeetingScreen
-                Navigator.push(context, MaterialPageRoute(builder: (context) => const ZoomMeetingScreen()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ZoomMeetingScreen(),
+                  ),
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE89B8E),
@@ -205,11 +237,18 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
               ),
               child: const Text(
                 'Join',
-                style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -221,7 +260,7 @@ class _HomePageState extends State<HomePage> {
   // ========================================
   // MY FEATURE SECTION
   // ========================================
-  
+
   Widget _buildFeatureSection() {
     return Column(
       children: [
@@ -236,7 +275,11 @@ class _HomePageState extends State<HomePage> {
               onPressed: () {},
               child: const Text(
                 'Edit',
-                style: TextStyle(color: Colors.orange, fontSize: 16, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  color: Colors.orange,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -252,7 +295,9 @@ class _HomePageState extends State<HomePage> {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const ZoomMeetingScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const ZoomMeetingScreen(),
+                  ),
                 );
               },
             ),
@@ -274,7 +319,9 @@ class _HomePageState extends State<HomePage> {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const MyCourseQuizPage()),
+                  MaterialPageRoute(
+                    builder: (context) => const MyCourseQuizPage(),
+                  ),
                 );
               },
             ),
@@ -285,13 +332,14 @@ class _HomePageState extends State<HomePage> {
               () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const CompetitionListScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => const CompetitionListScreen(),
+                  ),
                 );
               },
             ),
           ],
         ),
-
       ],
     );
   }
@@ -326,251 +374,267 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ========================================
-  // COURSES SECTION
+  // COURSES SECTION (UPDATED)
   // ========================================
-  
-Widget _buildCoursesList() {
-  return SizedBox(
-    height: 340,
-    child: ListView.builder(
-      scrollDirection: Axis.horizontal,
-      physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.only(bottom: 20), // Tambah padding bawah untuk shadow
-      itemCount: 3,
-      itemBuilder: (context, index) {
-        final courses = [
-          {
-            'title': 'UI/UX Masterclass',
-            'lessons': '28 lessons',
-            'duration': '6h 30min',
-            'rating': '4.9',
-            'image': 'https://images.unsplash.com/photo-1561070791-2526d30994b5?w=400&h=300&fit=crop',
-            'color': const Color(0xFFD8B4E8),
-          },
-          {
-            'title': 'Business Case',
-            'lessons': '28 lessons',
-            'duration': '6h 10min',
-            'rating': '4.6',
-            'image': 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400&h=300&fit=crop',
-            'color': const Color(0xFF5B7FC4),
-          },
-          {
-            'title': 'Business Plan',
-            'lessons': '28 lessons',
-            'duration': '6h 25min',
-            'rating': '4.7',
-            'image': 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop',
-            'color': const Color(0xFF2C3E50),
-          },
-        ];
-        
-        return Padding(
-          padding: EdgeInsets.only(
-            left: index == 0 ? 0 : 8,
-            right: 8,
-          ),
-          child: _buildCourseCard(
-            courses[index]['title'] as String,
-            courses[index]['lessons'] as String,
-            courses[index]['duration'] as String,
-            courses[index]['rating'] as String,
-            courses[index]['image'] as String,
-            courses[index]['color'] as Color,
-          ),
-        );
-      },
-    ),
-  );
-}
 
-Widget _buildCourseCard(
-  String title,
-  String lessons,
-  String duration,
-  String rating,
-  String imageUrl,
-  Color color,
-) {
-  return Material(
-    color: Colors.transparent,
-    child: InkWell(
-      borderRadius: BorderRadius.circular(20),
-      onTap: () {
-        print('PINDAH KE DETAIL COURSE');
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => const DetailCoursePage(),
-          ),
-        );
-      },
-      child: Container(
-        width: 240,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade300,
-              blurRadius: 10,
-              offset: const Offset(0, 4),
+  Widget _buildCoursesList() {
+    // 1. Tampilkan Loading jika data belum siap
+    if (_isLoadingCourses) {
+      return const SizedBox(
+        height: 280,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    // 2. Tampilkan pesan jika data kosong
+    if (_courseList.isEmpty) {
+      return const SizedBox(
+        height: 100,
+        child: Center(child: Text("Belum ada course tersedia.")),
+      );
+    }
+
+    // 3. Tampilkan List Data Asli
+    return SizedBox(
+      height: 280, // Tinggi container disesuaikan
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 20),
+        itemCount: _courseList.length,
+        itemBuilder: (context, index) {
+          final course = _courseList[index];
+
+          // Kita kirim seluruh Map 'course' ke widget card
+          return Padding(
+            padding: EdgeInsets.only(left: index == 0 ? 0 : 8, right: 8),
+            child: _buildCourseCard(course),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildCourseCard(Map<String, dynamic> courseData) {
+    // Ekstrak data dari Map (JSON Supabase)
+    final String title = courseData['nama_course'] ?? 'No Title';
+    final String imageUrl = courseData['link_gambar'] ?? '';
+    final int lessonsCount = courseData['jumlah_lesson'] ?? 0;
+    final String duration = courseData['durasi_course'] ?? '-';
+    // Logic simple untuk ambil rating rata-rata
+    final List ratings = courseData['rating'] ?? [];
+    String ratingStr = '0.0';
+    if (ratings.isNotEmpty) {
+      double total = 0;
+      for (var r in ratings) {
+        total += (r['rating'] as num).toDouble();
+      }
+      ratingStr = (total / ratings.length).toStringAsFixed(1);
+    }
+
+    // Warna dummy agar UI tetap variatif (karena di DB mungkin belum ada field warna)
+    final Color cardColor = const Color(0xFFD8B4E8);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () {
+          // --- NAVIGASI KE DETAIL DENGAN DATA ASLI ---
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              // Kirim Data Asli (courseData) ke DetailCoursePage
+              builder: (_) => DetailCoursePage(courseData: courseData),
             ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Image with gradient overlay
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  child: Image.network(
-                    imageUrl,
+          );
+        },
+        child: Container(
+          width: 240,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.shade300,
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image with gradient overlay
+              Stack(
+                children: [
+                  ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(20),
+                    ),
+                    child: Image.network(
+                      imageUrl,
+                      width: 240,
+                      height: 160,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          width: 240,
+                          height: 160,
+                          color: Colors.grey[300],
+                          child: const Icon(Icons.image, color: Colors.grey),
+                        );
+                      },
+                    ),
+                  ),
+                  // Gradient overlay
+                  Container(
                     width: 240,
                     height: 160,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-                // Gradient overlay
-                Container(
-                  width: 240,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        color.withOpacity(0.3),
-                        color.withOpacity(0.6),
-                      ],
+                    decoration: BoxDecoration(
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(20),
+                      ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          cardColor.withOpacity(0.3),
+                          cardColor.withOpacity(0.6),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                // Heart icon
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.favorite_border,
-                      color: Colors.grey,
-                      size: 20,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            // Card content
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  // Heart icon
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.favorite_border,
+                        color: Colors.grey,
+                        size: 20,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '($lessons)',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: Colors.grey.shade500,
+                ],
+              ),
+              // Card content
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      // Duration badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFFFF9E6),
-                          borderRadius: BorderRadius.circular(12),
+                    const SizedBox(height: 4),
+                    Text(
+                      '$lessonsCount lessons',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.grey.shade500,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        // Duration badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF9E6),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.access_time,
+                                size: 14,
+                                color: Color(0xFFFFB800),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                duration,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Color(0xFFFFB800),
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Row(
+                        // Rating
+                        Row(
                           children: [
                             const Icon(
-                              Icons.access_time,
-                              size: 14,
+                              Icons.star,
+                              size: 18,
                               color: Color(0xFFFFB800),
                             ),
                             const SizedBox(width: 4),
                             Text(
-                              duration,
+                              ratingStr,
                               style: const TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFFFFB800),
-                                fontWeight: FontWeight.w500,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
                               ),
                             ),
                           ],
                         ),
-                      ),
-                      // Rating
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.star,
-                            size: 18,
-                            color: Color(0xFFFFB800),
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            rating,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   // ========================================
   // COMPETITION CAROUSEL
   // ========================================
-  
+
   Widget _buildCompetitionCarousel() {
     final List<Map<String, String>> competitions = [
       {
         'title': 'Inovatik Astratech',
         'status': 'Closed',
-        'image': 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=500&fit=crop',
+        'image':
+            'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=500&fit=crop',
       },
       {
         'title': 'Essay HKI Budaya',
         'status': 'On Going',
-        'image': 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=500&fit=crop',
+        'image':
+            'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?w=800&h=500&fit=crop',
       },
       {
         'title': 'Design Competition',
         'status': 'Almost Over',
-        'image': 'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&h=500&fit=crop',
+        'image':
+            'https://images.unsplash.com/photo-1531482615713-2afd69097998?w=800&h=500&fit=crop',
       },
     ];
-    
+
     return SizedBox(
       height: 320,
       child: PageView.builder(
@@ -614,11 +678,15 @@ Widget _buildCourseCard(
   Widget _buildCompetitionCard(String imageUrl, String title, String status) {
     Color statusColor = status == 'Closed'
         ? Colors.white
-        : (status == 'On Going' ? const Color(0xFF2D5F3F) : const Color(0xFF8B6914));
-    
+        : (status == 'On Going'
+              ? const Color(0xFF2D5F3F)
+              : const Color(0xFF8B6914));
+
     Color statusBg = status == 'Closed'
         ? const Color(0xFFE89B8E)
-        : (status == 'On Going' ? const Color(0xFFA8D5BA) : const Color(0xFFFFF59D));
+        : (status == 'On Going'
+              ? const Color(0xFFA8D5BA)
+              : const Color(0xFFFFF59D));
 
     return Container(
       decoration: BoxDecoration(
@@ -684,7 +752,10 @@ Widget _buildCourseCard(
               top: 20,
               left: 20,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: statusBg,
                   borderRadius: BorderRadius.circular(20),
