@@ -19,7 +19,9 @@ class ZoomMeetingScreen extends StatelessWidget {
             ),
             child: const Icon(Icons.arrow_back, color: Colors.black),
           ),
-          onPressed: () {},
+          onPressed: () {
+            Navigator.pop(context); // Ini yang penting!
+          },
         ),
         title: const Text(
           'Zoom Meeting',

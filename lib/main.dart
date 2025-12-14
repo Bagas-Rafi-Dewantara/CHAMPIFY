@@ -1,3 +1,4 @@
+import 'package:champify/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -39,13 +40,15 @@ class MyApp extends StatelessWidget {
 
       // PERUBAHAN DISINI:
       // Langsung ke Navbar (Homepage) tanpa cek login
-      home: const Navbar(),
+      home: const WelcomePage(),
 
       routes: {
         '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignUpFormPage(),
         '/main': (context) => const Navbar(),
         '/mentoring': (context) => const ZoomMeetingScreen(),
+        '/welcome_page': (context) => const WelcomePage(),
+        '/homepage': (context) => const HomePage(),
       },
     );
   }
