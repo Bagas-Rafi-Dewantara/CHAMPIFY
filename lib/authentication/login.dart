@@ -1,6 +1,7 @@
 //nat mengerjakan
 
 import 'package:flutter/material.dart';
+import '../homepage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -201,7 +202,7 @@ class _LoginPageState extends State<LoginPage> {
                         const SnackBar(content: Text('Login successful!')),
                       );
 
-                      Navigator.pushReplacementNamed(context, '/homepage');
+                      Navigator.pushReplacementNamed(context, '/main');
                     } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(

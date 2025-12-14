@@ -52,8 +52,7 @@ class MyCourseCard extends StatelessWidget {
                         color: Color(0xFF2D2D2D),
                         height: 1.2,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
+                      // HAPUS maxLines dan overflow di sini agar text turun ke bawah
                     ),
                   ),
                   const Spacer(),

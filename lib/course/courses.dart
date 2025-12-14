@@ -23,7 +23,11 @@ class _CoursePageState extends State<CoursePage> {
 
   Future<void> fetchCourses() async {
     try {
-      final data = await supabase.from('course').select();
+      // PERUBAHAN ADA DI SINI:
+      // '*, mentor(*)' artinya: Ambil semua kolom course, DAN gabungkan dengan tabel mentor
+      final data = await supabase
+          .from('course')
+          .select('*, mentor(*), playlist(*), rating(*, pengguna(*))');
       setState(() {
         courseList = List<Map<String, dynamic>>.from(data);
         isLoading = false;
@@ -150,7 +154,6 @@ class _CoursePageState extends State<CoursePage> {
   }
 }
 
-// Card untuk Available Course (Tetap di sini atau dipisah boleh)
 class AvailableCourseCard extends StatelessWidget {
   final Map<String, dynamic> courseData;
   const AvailableCourseCard({super.key, required this.courseData});
@@ -160,7 +163,9 @@ class AvailableCourseCard extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const DetailCoursePage()),
+        MaterialPageRoute(
+          builder: (context) => DetailCoursePage(courseData: courseData),
+        ),
       ),
       child: Container(
         decoration: BoxDecoration(
@@ -178,6 +183,7 @@ class AvailableCourseCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Bagian Gambar
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(15),
@@ -194,25 +200,29 @@ class AvailableCourseCard extends StatelessWidget {
                     : const Icon(Icons.bar_chart, color: Colors.white),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    courseData['nama_course'] ?? 'Tanpa Judul',
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+
+            // Bagian Teks Judul & Lesson
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      courseData['nama_course'] ?? 'Tanpa Judul',
+                      // Hapus maxLines dan overflow agar turun ke bawah (wrap)
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
-                  ),
-                  Text(
-                    "(${courseData['jumlah_lesson'] ?? 0} lessons)",
-                    style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      "(${courseData['jumlah_lesson'] ?? 0} lessons)",
+                      style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
