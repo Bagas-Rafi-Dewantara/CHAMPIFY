@@ -1,3 +1,5 @@
+//nat mengerjakan
+
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
@@ -25,7 +27,7 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: const Color(0xFFE8C4A8),
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
+          child:  Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
             child: Column(
               children: [
@@ -39,13 +41,13 @@ class _LoginPageState extends State<LoginPage> {
                       },
                       icon: Container(
                         padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
+                        decoration:  BoxDecoration(
                           border: Border.all(color: Colors.black26),
                           shape: BoxShape.circle,
                           color: const Color(0xFFE8C4A8),
                         ),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new,
+                        child:  const Icon(
+                          Icons. arrow_back_ios_new,
                           size: 20,
                           color: Colors.black87,
                         ),
@@ -61,10 +63,10 @@ class _LoginPageState extends State<LoginPage> {
                   ],
                 ),
                 const SizedBox(height: 40),
-                // Planet Character
+                // Planet Character - DIPERBESAR
                 Image.asset(
-                  'assets/images/planetlogin.png',
-                  height: 220,
+                  'assets/images/saturnlogin.png',
+                  height: 280,
                 ),
                 const SizedBox(height: 50),
                 // Username Field
@@ -75,7 +77,7 @@ class _LoginPageState extends State<LoginPage> {
                       'username',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.black87,
+                        color: Colors. black87,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -83,8 +85,8 @@ class _LoginPageState extends State<LoginPage> {
                     Container(
                       decoration: BoxDecoration(
                         color: const Color(0xFFE8C4A8),
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: Colors.black87, width: 2),
+                        borderRadius: BorderRadius. circular(28),
+                        border: Border. all(color: Colors.black87, width: 2),
                       ),
                       child: TextField(
                         controller: _usernameController,
@@ -98,7 +100,7 @@ class _LoginPageState extends State<LoginPage> {
                             color: Color(0xFF9CA3AF),
                           ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
+                          contentPadding: EdgeInsets. symmetric(
                             horizontal: 20,
                             vertical: 16,
                           ),
@@ -116,7 +118,7 @@ class _LoginPageState extends State<LoginPage> {
                       'password',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.black87,
+                        color: Colors. black87,
                         fontWeight: FontWeight.w400,
                       ),
                     ),
@@ -125,11 +127,11 @@ class _LoginPageState extends State<LoginPage> {
                       decoration: BoxDecoration(
                         color: const Color(0xFFE8C4A8),
                         borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: Colors.black87, width: 2),
+                        border: Border. all(color: Colors.black87, width: 2),
                       ),
                       child: TextField(
                         controller: _passwordController,
-                        obscureText: !_isPasswordVisible,
+                        obscureText: ! _isPasswordVisible,
                         style: const TextStyle(
                           fontSize: 16,
                           color: Colors.black87,
@@ -152,7 +154,7 @@ class _LoginPageState extends State<LoginPage> {
                               });
                             },
                           ),
-                          border: InputBorder.none,
+                          border:  InputBorder.none,
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 20,
                             vertical: 16,
@@ -193,7 +195,7 @@ class _LoginPageState extends State<LoginPage> {
                   child: ElevatedButton(
                     onPressed: () {
                       // Handle login
-                      if (_usernameController.text.isNotEmpty &&
+                      if (_usernameController.text. isNotEmpty &&
                           _passwordController.text.isNotEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
@@ -210,7 +212,7 @@ class _LoginPageState extends State<LoginPage> {
                         );
                       }
                     },
-                    style: ElevatedButton.styleFrom(
+                    style:  ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFFFFF4B8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(28),
