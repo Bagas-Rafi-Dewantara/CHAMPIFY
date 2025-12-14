@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'signup2.dart';
 
 class SignUpFormPage extends StatefulWidget {
-  const SignUpFormPage({super. key});
+  const SignUpFormPage({super.key});
 
   @override
   State<SignUpFormPage> createState() => _SignUpFormPageState();
@@ -27,21 +28,23 @@ class _SignUpFormPageState extends State<SignUpFormPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFFFF8DC),
       body: SafeArea(
-        child:  Column(
+        child: Column(
           children: [
             Padding(
               padding: const EdgeInsets.all(16),
-              child:   Align(
-                alignment: Alignment.  topLeft,
-                child: IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon:  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.black26),
-                      shape: BoxShape.circle,
+              child: Align(
+                alignment: Alignment.topLeft,
+                child: Container(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFFC4B0A0),
+                      width: 2,
                     ),
-                    child: const Icon(Icons.arrow_back_ios_new),
+                  ),
+                  child: IconButton(
+                    icon: const Icon(Icons.chevron_left, color: Color(0xFF9B7765)),
+                    onPressed: () => Navigator.pop(context),
                   ),
                 ),
               ),
@@ -55,58 +58,31 @@ class _SignUpFormPageState extends State<SignUpFormPage> {
                     RichText(
                       textAlign: TextAlign.center,
                       text: const TextSpan(
-                        style:   TextStyle(
-                          fontSize:   24,
-                          color:   Colors.black87,
-                        ),
+                        style: TextStyle(fontSize: 24, color: Colors.black87),
                         children: [
-                          TextSpan(text:   'Please '),
+                          TextSpan(text: 'Please '),
                           TextSpan(
                             text: 'complete ',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFFB8B08D),
-                            ),
+                            style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFB8B08D)),
                           ),
                           TextSpan(text: 'the field below'),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 100),
                     _buildField(_fullnameController, 'Fullname'),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     _buildField(_majorController, 'Major'),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     _buildField(_universityController, 'University'),
-                    const SizedBox(height: 20),
-                    _buildField(_numberController, 'Number',
-                        keyboardType: TextInputType.phone),
+                    const SizedBox(height: 16),
+                    _buildField(_numberController, 'Number', keyboardType: TextInputType.phone),
                     const SizedBox(height: 60),
-                    const Text(
-                      'Almost there ....  .',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFB8B08D),
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Row(
-                      mainAxisAlignment:  MainAxisAlignment.  center,
-                      children: [
-                        Image.asset(
-                          'assets/images/starexcited.png',
-                          height: 120,
-                        ),
-                        const SizedBox(width: 40),
-                        _buildSubmitButton(context),
-                      ],
-                    ),
-                    const SizedBox(height: 40),
                   ],
                 ),
               ),
             ),
+            _buildSubmitButton(context),
           ],
         ),
       ),
@@ -118,49 +94,78 @@ class _SignUpFormPageState extends State<SignUpFormPage> {
     String hint, {
     TextInputType keyboardType = TextInputType.text,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF8DC),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Colors.black87, width: 2),
-      ),
-      child: TextField(
-        controller: controller,
-        keyboardType: keyboardType,
-        decoration: InputDecoration(
-          hintText: hint,
-          border: InputBorder.  none,
-          contentPadding: 
-              const EdgeInsets.symmetric(horizontal: 24, vertical:  18),
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0xFFB8B8B8)),
+        prefixIcon: _getIconForField(hint),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: Color(0xFFC4B0A0), width: 2),
         ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: Color(0xFFC4B0A0), width: 2),
+        ),
+        filled: true,
+        fillColor: const Color(0xFFFFFFFF).withValues(alpha: 0.3),
       ),
     );
   }
 
+  Widget _getIconForField(String hint) {
+    switch (hint) {
+      case 'Fullname':
+        return const Icon(Icons.person, color: Color(0xFF9B9B9B));
+      case 'Major':
+        return const Icon(Icons.school, color: Color(0xFF9B9B9B));
+      case 'University':
+        return const Icon(Icons.business, color: Color(0xFF9B9B9B));
+      case 'Number':
+        return const Icon(Icons.phone, color: Color(0xFF9B9B9B));
+      default:
+        return const Icon(Icons.person, color: Color(0xFF9B9B9B));
+    }
+  }
+
   Widget _buildSubmitButton(BuildContext context) {
-    return Container(
-      width:  60,
-      height: 60,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF8DC),
-        border: Border.all(color: Colors.black26),
-        borderRadius: BorderRadius.  circular(12),
-      ),
-      child: IconButton(
-        icon: const Icon(Icons.arrow_forward, color: Colors.black87),
-        onPressed: () {
-          if (_fullnameController.text. isNotEmpty &&
-              _majorController.text. isNotEmpty &&
-              _universityController.text.isNotEmpty &&
-              _numberController.text.isNotEmpty) {
-            // Langsung navigate ke login
-            Navigator.pushNamed(context, '/login');
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content:  Text('Please fill all fields')),
-            );
-          }
-        },
+    return Padding(
+      padding: const EdgeInsets.only(right: 30, bottom: 40),
+      child: Align(
+        alignment: Alignment.bottomRight,
+        child: Container(
+          decoration: BoxDecoration(
+            border: Border.all(color: const Color(0xFFC4B0A0), width: 2),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: IconButton(
+            icon: const Icon(Icons.arrow_forward, color: Color(0xFF9B7765)),
+            onPressed: () {
+              if (_fullnameController.text.isNotEmpty &&
+                  _majorController.text.isNotEmpty &&
+                  _universityController.text.isNotEmpty &&
+                  _numberController.text.isNotEmpty) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => Signup2Screen(
+                      fullName: _fullnameController.text,
+                      major: _majorController.text,
+                      university: _universityController.text,
+                      phoneNumber: _numberController.text,
+                    ),
+                  ),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please fill all fields')),
+                );
+              }
+            },
+          ),
+        ),
       ),
     );
   }
