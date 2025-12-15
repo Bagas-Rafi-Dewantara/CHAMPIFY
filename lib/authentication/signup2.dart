@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'verification_page.dart';
 
 class Signup2Screen extends StatefulWidget {
   const Signup2Screen({
@@ -31,7 +32,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
   @override
   void dispose() {
     usernameController.dispose();
-    emailController.dispose();
+    emailController. dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
     super.dispose();
@@ -47,18 +48,18 @@ class _Signup2ScreenState extends State<Signup2Screen> {
           Positioned(
             top: 200,
             right: -30, // Posisi horizontal
-            child: Opacity(
+            child:  Opacity(
               opacity: 0.7, // Transparansi gambar
               child: Image.asset(
                 'assets/images/ngintip.png', // Path ke gambar bintang
                 width: 150, // Lebar gambar
                 height: 150, // Tinggi gambar
-                fit: BoxFit.contain, // Fit gambar
+                fit: BoxFit. contain, // Fit gambar
               ),
             ),
           ),
           SingleChildScrollView(
-            child: Column(
+            child:  Column(
               children: [
                 Padding(
                   padding: const EdgeInsets.only(top: 40, left: 20, right: 20),
@@ -101,7 +102,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                       SizedBox(height: 0),
                       Text(
                         'Step',
-                        style: TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: Color(0xFF7B8B9E)),
+                        style:  TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: Color(0xFF7B8B9E)),
                       ),
                       SizedBox(height: 0),
                       Text(
@@ -119,19 +120,19 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                     children: [
                       TextField(
                         controller: usernameController,
-                        decoration: _inputDecoration('Username', Icons.person),
+                        decoration:  _inputDecoration('Username', Icons.person),
                       ),
                       const SizedBox(height: 16),
                       TextField(
                         controller: emailController,
                         decoration: _inputDecoration('Email', Icons.email),
-                        keyboardType: TextInputType.emailAddress,
+                        keyboardType: TextInputType. emailAddress,
                       ),
                       const SizedBox(height: 16),
                       TextField(
                         controller: passwordController,
-                        obscureText: !showPassword,
-                        decoration: _passwordInputDecoration(
+                        obscureText: ! showPassword,
+                        decoration:  _passwordInputDecoration(
                           'Password',
                           showPassword,
                           () => setState(() => showPassword = !showPassword),
@@ -140,7 +141,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                       const SizedBox(height: 16),
                       TextField(
                         controller: confirmPasswordController,
-                        obscureText: !showConfirmPassword,
+                        obscureText: ! showConfirmPassword,
                         decoration: _passwordInputDecoration(
                           'Confirm Password',
                           showConfirmPassword,
@@ -153,7 +154,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                 const SizedBox(height: 40),
                 Padding(
                   padding: const EdgeInsets.only(right: 30, bottom: 40),
-                  child: Align(
+                  child:  Align(
                     alignment: Alignment.bottomRight,
                     child: Container(
                       decoration: BoxDecoration(
@@ -162,9 +163,9 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                       ),
                       child: IconButton(
                         icon: isLoading
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                            ? const SizedBox(width: 24, height: 24, child:  CircularProgressIndicator(strokeWidth: 2))
                             : const Icon(Icons.arrow_forward, color: Color(0xFF9B7765)),
-                        onPressed: isLoading ? null : _handleSignup,
+                        onPressed: isLoading ?  null : _handleSignup,
                       ),
                     ),
                   ),
@@ -183,12 +184,12 @@ class _Signup2ScreenState extends State<Signup2Screen> {
       hintStyle: const TextStyle(color: Color(0xFFB8B8B8)),
       prefixIcon: Icon(icon, color: const Color(0xFF9B9B9B)),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(20),
+        borderRadius:  BorderRadius.circular(20),
         borderSide: const BorderSide(color: Color(0xFFC4B0A0), width: 2),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: Color(0xFFC4B0A0), width: 2),
+        borderSide: const BorderSide(color:  Color(0xFFC4B0A0), width: 2),
       ),
       filled: true,
       fillColor: const Color(0xFFFFFFFF).withOpacity(0.3),
@@ -201,7 +202,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
       hintStyle: const TextStyle(color: Color(0xFFB8B8B8)),
       prefixIcon: const Icon(Icons.lock, color: Color(0xFF9B9B9B)),
       suffixIcon: IconButton(
-        icon: Icon(show ? Icons.visibility : Icons.visibility_off, color: const Color(0xFF9B9B9B)),
+        icon: Icon(show ? Icons. visibility : Icons.visibility_off, color: const Color(0xFF9B9B9B)),
         onPressed: toggle,
       ),
       border: OutlineInputBorder(
@@ -218,6 +219,9 @@ class _Signup2ScreenState extends State<Signup2Screen> {
   }
 
   Future<void> _handleSignup() async {
-    // Tambahkan logika sign-up yang sesuai
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const VerificationPage()),
+    );
   }
 }
