@@ -46,7 +46,6 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
           autoPlay: true,
           mute: false,
           enableCaption: true,
-          // forceHD: true, // Bisa diaktifkan kalau mau maksa HD
         ),
       );
     }
