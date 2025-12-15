@@ -372,58 +372,12 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ========================================
-  // UPCOMING MEETING SECTION (SUDAH DINAMIS)
+  // UPCOMING MEETING SECTION
   // ========================================
 
   Widget _buildUpcomingMeeting() {
-    // 1. Tampilkan Loading
-    if (_isLoadingMeeting) {
-      return Container(
-        height: 80,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: const Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-    }
-
-    // 2. Jika tidak ada meeting yang akan datang
-    if (_upcomingMeeting == null) {
-      return Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade300),
-        ),
-        child: const Center(
-          child: Text(
-            'Tidak ada jadwal meeting terdekat.',
-            style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
-          ),
-        ),
-      );
-    }
-
-    // 3. Ekstrak data yang akan ditampilkan
-    final Map<String, dynamic> meeting = _upcomingMeeting!;
-    final String meetingTitle = meeting['nama_zoom'] ?? 'Diskusi Bersama Mentor'; // Menggunakan nama_zoom
-    // PERBAIKAN: Mengambil data dari kunci 'date'
-    final String tanggal = meeting['date'] != null 
-        ? _formatDate(meeting['date']) 
-        : 'Tanggal tidak diketahui';
-    final String waktu = (meeting['waktu_mulai'] ?? '-') + ' - ' + (meeting['waktu_selesai'] ?? '-') + ' WIB';
-    final String zoomLink = meeting['link_zoom'] ?? '';
-    
     return GestureDetector(
       onTap: () {
-        // Navigasi ke ZoomMeetingScreen atau buka link zoom
-        if (zoomLink.isNotEmpty) {
-          // Anda bisa menggunakan url_launcher di sini untuk membuka link
-          // Tapi untuk konsistensi, kita navigasi ke ZoomMeetingScreen seperti kode lama
-        }
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const ZoomMeetingScreen()),
@@ -451,21 +405,21 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    meetingTitle, // <--- DINAMIS
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  const Text(
+                    'Discuss with mentor',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 8,
-                    children: [
+                    children: const [
                       Text(
-                        tanggal, // <--- DINAMIS
-                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        '30 Juli 2024',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
                       ),
                       Text(
-                        waktu, // <--- DINAMIS
-                        style: const TextStyle(fontSize: 11, color: Colors.grey),
+                        '19.00-21.00 WIB',
+                        style: TextStyle(fontSize: 11, color: Colors.grey),
                       ),
                     ],
                   ),
