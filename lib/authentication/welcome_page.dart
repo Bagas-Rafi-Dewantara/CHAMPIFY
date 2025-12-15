@@ -53,7 +53,7 @@ class WelcomePage extends StatelessWidget {
                     Navigator.pushNamed(context, '/signup');
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFB8B08D),
+                    backgroundColor: const Color(0xFFE8A87C),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),

@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-import 'verification_page.dart'; // Pastikan import ini benar sesuai struktur foldermu
-
-final supabase = Supabase.instance.client;
 
 class Signup2Screen extends StatefulWidget {
   const Signup2Screen({
@@ -41,115 +37,29 @@ class _Signup2ScreenState extends State<Signup2Screen> {
     super.dispose();
   }
 
-  bool isEmailValid(String email) {
-    final emailRegex =
-        RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
-    return emailRegex.hasMatch(email);
-  }
-
-  Future<void> _handleSignup() async {
-    final email = emailController.text.trim();
-    final password = passwordController.text.trim();
-    final confirm = confirmPasswordController.text.trim();
-    final username = usernameController.text.trim();
-
-    // --- 1. VALIDASI INPUT ---
-    if (!isEmailValid(email)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Email tidak valid!')));
-      return;
-    }
-
-    if (email.isEmpty ||
-        password.isEmpty ||
-        confirm.isEmpty ||
-        username.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please fill all fields')));
-      return;
-    }
-
-    if (password != confirm) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Password tidak cocok!')));
-      return;
-    }
-
-    setState(() => isLoading = true);
-
-    try {
-      // --- 2. PROSES SIGN UP (CLEAN CODE) ---
-      // Kita kirim data profil lewat 'data' (metadata).
-      // Trigger di Supabase akan otomatis menangkap ini dan memasukkannya ke tabel 'pengguna'.
-      final res = await supabase.auth.signUp(
-        email: email, 
-        password: password,
-        data: {
-          'username': username,
-          'full_name': widget.fullName.trim(),
-          'major': widget.major.trim(),
-          'university': widget.university.trim(),
-          'phone_number': widget.phoneNumber.trim(),
-        },
-      );
-
-      final user = res.user;
-
-      if (user == null) {
-        throw Exception('Signup gagal: Cek koneksi atau email mungkin sudah terdaftar.');
-      }
-
-      // --- 3. NAVIGASI KE HALAMAN VERIFIKASI (KODE KAMU) ---
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Verifikasi emailmu terlebih dahulu!')),
-      );
-
-      // Pindah ke halaman VerificationPage
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const VerificationPage()),
-      );
-
-    } on AuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Auth error: ${e.message}')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')));
-      }
-    } finally {
-      if (mounted) setState(() => isLoading = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFE8D5C4),
       body: Stack(
         children: [
-          // Yellow decoration
+          // Ganti gambar kuning dengan gambar bintang dari lokal
           Positioned(
             top: 200,
-            right: -30,
-            child: Container(
-              width: 150,
-              height: 200,
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFFF88).withOpacity(0.7),
-                borderRadius: BorderRadius.circular(80),
+            right: -30, // Posisi horizontal
+            child: Opacity(
+              opacity: 0.7, // Transparansi gambar
+              child: Image.asset(
+                'assets/images/ngintip.png', // Path ke gambar bintang
+                width: 150, // Lebar gambar
+                height: 150, // Tinggi gambar
+                fit: BoxFit.contain, // Fit gambar
               ),
             ),
           ),
           SingleChildScrollView(
             child: Column(
               children: [
-                // Header dengan back button dan logo
                 Padding(
                   padding: const EdgeInsets.only(top: 40, left: 20, right: 20),
                   child: Row(
@@ -163,14 +73,16 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                           ),
                         ),
                         child: IconButton(
-                          icon: const Icon(Icons.chevron_left,
-                              color: Color(0xFF9B7765)),
+                          icon: const Icon(Icons.chevron_left, color: Color(0xFF9B7765)),
                           onPressed: () => Navigator.pop(context),
                         ),
                       ),
                       const Spacer(),
-                      Image.asset('assets/images/logofull.png',
-                          height: 35, fit: BoxFit.contain),
+                      Image.asset(
+                        'assets/images/logofull.png', // Path ke logo
+                        height: 35,
+                        fit: BoxFit.contain,
+                      ),
                       const Spacer(),
                     ],
                   ),
@@ -184,26 +96,17 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                     children: const [
                       Text(
                         'One',
-                        style: TextStyle(
-                            fontSize: 42,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF7B8B9E)),
+                        style: TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: Color(0xFF7B8B9E)),
                       ),
                       SizedBox(height: 0),
                       Text(
                         'Step',
-                        style: TextStyle(
-                            fontSize: 42,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF7B8B9E)),
+                        style: TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: Color(0xFF7B8B9E)),
                       ),
                       SizedBox(height: 0),
                       Text(
                         'Closer',
-                        style: TextStyle(
-                            fontSize: 42,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF7B8B9E)),
+                        style: TextStyle(fontSize: 42, fontWeight: FontWeight.bold, color: Color(0xFF7B8B9E)),
                       ),
                     ],
                   ),
@@ -241,33 +144,26 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                         decoration: _passwordInputDecoration(
                           'Confirm Password',
                           showConfirmPassword,
-                          () => setState(
-                              () => showConfirmPassword = !showConfirmPassword),
+                          () => setState(() => showConfirmPassword = !showConfirmPassword),
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 40),
-                // Next Button
                 Padding(
                   padding: const EdgeInsets.only(right: 30, bottom: 40),
                   child: Align(
                     alignment: Alignment.bottomRight,
                     child: Container(
                       decoration: BoxDecoration(
-                        border:
-                            Border.all(color: const Color(0xFFC4B0A0), width: 2),
+                        border: Border.all(color: const Color(0xFFC4B0A0), width: 2),
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: IconButton(
                         icon: isLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.arrow_forward,
-                                color: Color(0xFF9B7765)),
+                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.arrow_forward, color: Color(0xFF9B7765)),
                         onPressed: isLoading ? null : _handleSignup,
                       ),
                     ),
@@ -299,15 +195,13 @@ class _Signup2ScreenState extends State<Signup2Screen> {
     );
   }
 
-  InputDecoration _passwordInputDecoration(
-      String hint, bool show, VoidCallback toggle) {
+  InputDecoration _passwordInputDecoration(String hint, bool show, VoidCallback toggle) {
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(color: Color(0xFFB8B8B8)),
       prefixIcon: const Icon(Icons.lock, color: Color(0xFF9B9B9B)),
       suffixIcon: IconButton(
-        icon: Icon(show ? Icons.visibility : Icons.visibility_off,
-            color: const Color(0xFF9B9B9B)),
+        icon: Icon(show ? Icons.visibility : Icons.visibility_off, color: const Color(0xFF9B9B9B)),
         onPressed: toggle,
       ),
       border: OutlineInputBorder(
@@ -321,5 +215,9 @@ class _Signup2ScreenState extends State<Signup2Screen> {
       filled: true,
       fillColor: const Color(0xFFFFFFFF).withOpacity(0.3),
     );
+  }
+
+  Future<void> _handleSignup() async {
+    // Tambahkan logika sign-up yang sesuai
   }
 }
