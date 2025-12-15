@@ -8,7 +8,9 @@ import 'competition.dart';
 import 'settings.dart';
 
 class Navbar extends StatefulWidget {
-  const Navbar({super.key});
+  final int initialIndex;
+  final bool initialSelectMyCourse;
+  const Navbar({super.key, this.initialIndex = 0, this.initialSelectMyCourse = false});
 
   @override
   State<Navbar> createState() => _NavbarState();
@@ -16,6 +18,15 @@ class Navbar extends StatefulWidget {
 
 class _NavbarState extends State<Navbar> {
   int _selectedIndex = 0;
+  bool _handledInitialArgs = false;
+  bool _courseOpenMyCourse = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+    _courseOpenMyCourse = widget.initialSelectMyCourse;
+  }
 
   // Daftar Halaman
   final List<Widget> _pages = [
@@ -29,11 +40,43 @@ class _NavbarState extends State<Navbar> {
   final Color _themeColor = const Color(0xFFE89B8E);
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_handledInitialArgs) return;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Map<String, dynamic>) {
+      final bool selectMyCourse = args['selectMyCourse'] == true;
+      final dynamic initialTab = args['initialTab'];
+      final bool goToMyCourse = selectMyCourse || initialTab == 'MyCourse';
+      if (goToMyCourse) {
+        setState(() {
+          _selectedIndex = 1; // Course tab
+          _courseOpenMyCourse = true; // signal CoursePage to open My Course
+        });
+        // Clear the args-driven flag after first build
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            setState(() => _courseOpenMyCourse = false);
+          }
+        });
+      }
+    }
+
+    _handledInitialArgs = true;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       extendBody: true,
-      body: _pages[_selectedIndex],
+      body: [
+        const HomePage(),
+        CoursePage(initialSelectMyCourse: _courseOpenMyCourse),
+        const CompetitionListScreen(),
+        const SettingsPage(),
+      ][_selectedIndex],
 
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -58,7 +101,7 @@ class _NavbarState extends State<Navbar> {
             hoverColor: Colors.grey[100]!,
             gap: 4, // Jarak icon ke text didempetin dikit
             activeColor: Colors.white,
-            iconSize:27,
+            iconSize: 27,
 
             // INI KUNCINYA: Padding dalam tombol dikurangi drastis (tadi 20, skrg 10)
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),

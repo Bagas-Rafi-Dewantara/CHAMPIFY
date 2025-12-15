@@ -1,35 +1,38 @@
 import 'package:flutter/material.dart';
+import 'mycourse_quiz.dart';
 
 class MyCourseScorePage extends StatelessWidget {
-  // Menerima data dari halaman Quiz
-  final List<Map<String, dynamic>> questions;
-  final List<int> userAnswers;
+  // Mode 1: Data detail untuk pembahasan
+  final List<Map<String, dynamic>>? questions;
+  final List<int>? userAnswers;
+
+  // Mode 2: Data Summary
+  final int totalQuestions;
+  final int correctCount;
+
+  // Data Wajib untuk Retake Quiz
+  final int quizId;
+  final List<dynamic> rawQuestions;
 
   const MyCourseScorePage({
     super.key,
-    required this.questions,
-    required this.userAnswers,
+    this.questions,
+    this.userAnswers,
+    required this.totalQuestions,
+    required this.correctCount,
+    required this.quizId,
+    required this.rawQuestions,
   });
-
-  // Fungsi hitung benar
-  int _calculateCorrectAnswers() {
-    int correctCount = 0;
-    for (int i = 0; i < questions.length; i++) {
-      if (userAnswers[i] == questions[i]['correctIndex']) {
-        correctCount++;
-      }
-    }
-    return correctCount;
-  }
 
   @override
   Widget build(BuildContext context) {
-    int correct = _calculateCorrectAnswers();
-    int total = questions.length;
-    int wrong = total - correct;
-    double score = (correct / total) * 100;
+    // 1. Hitung Score
+    double score = totalQuestions > 0
+        ? (correctCount / totalQuestions) * 100
+        : 0;
+    int wrong = totalQuestions - correctCount;
 
-    // Warna
+    // 2. Tentukan Warna Tema
     const Color primarySalmon = Color(0xFFFF9494);
     Color scoreColor = score >= 70
         ? const Color(0xFF4CAF50)
@@ -41,7 +44,7 @@ class MyCourseScorePage extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            // HEADER
+            // --- HEADER ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
               child: Row(
@@ -50,10 +53,7 @@ class MyCourseScorePage extends StatelessWidget {
                     backgroundColor: Colors.white.withOpacity(0.2),
                     child: IconButton(
                       icon: const Icon(Icons.close, color: Colors.white),
-                      onPressed: () {
-                        // Kirim sinyal 'close' untuk kembali ke Playlist
-                        Navigator.pop(context, 'close');
-                      },
+                      onPressed: () => Navigator.pop(context, 'close'),
                     ),
                   ),
                   const SizedBox(width: 15),
@@ -69,11 +69,10 @@ class MyCourseScorePage extends StatelessWidget {
               ),
             ),
 
-            // CONTENT AREA
+            // --- CONTENT AREA (White Box) ---
             Expanded(
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(25, 30, 25, 20),
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.only(
@@ -81,197 +80,198 @@ class MyCourseScorePage extends StatelessWidget {
                     topRight: Radius.circular(40),
                   ),
                 ),
+                // Ubah jadi Column agar bisa memisahkan area Scroll dan area Tombol
                 child: Column(
                   children: [
-                    // 1. DONUT CHART
-                    Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        SizedBox(
-                          width: 120,
-                          height: 120,
-                          child: CircularProgressIndicator(
-                            value: correct / total,
-                            strokeWidth: 8,
-                            backgroundColor: Colors.grey[200],
-                            color: scoreColor,
-                            strokeCap: StrokeCap.round,
-                          ),
-                        ),
-                        Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              "${score.toInt()}",
-                              style: TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: scoreColor,
-                              ),
-                            ),
-                            const Text(
-                              "Score",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    // 2. STATISTIK
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        _buildStatItem(
-                          "Correct",
-                          correct,
-                          const Color(0xFF4CAF50),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 40,
-                          color: Colors.grey[300],
-                        ),
-                        _buildStatItem("Wrong", wrong, const Color(0xFFFF5252)),
-                      ],
-                    ),
-
-                    const SizedBox(height: 25),
-
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        "Pembahasan Soal",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // 3. LIST PEMBAHASAN
+                    // A. AREA SCROLL (Chart, Stats, Review)
                     Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        itemCount: questions.length,
-                        itemBuilder: (context, index) {
-                          final q = questions[index];
-                          final bool isUserCorrect =
-                              userAnswers[index] == q['correctIndex'];
+                      child: SingleChildScrollView(
+                        // PADDING DIPERKECIL (Atas 15, Bawah 10)
+                        padding: const EdgeInsets.fromLTRB(25, 15, 25, 10),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 10),
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 15),
-                            padding: const EdgeInsets.all(15),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(15),
-                              border: Border.all(color: Colors.grey.shade200),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.05),
-                                  blurRadius: 5,
-                                  offset: const Offset(0, 3),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                            // 1. DONUT CHART (Score)
+                            Stack(
+                              alignment: Alignment.center,
                               children: [
-                                // --- UPDATE DI SINI (POSISI ICON PINDAH KE KANAN) ---
-                                Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                SizedBox(
+                                  width: 140,
+                                  height: 140,
+                                  child: CircularProgressIndicator(
+                                    value: score / 100,
+                                    strokeWidth: 12,
+                                    backgroundColor: Colors.grey[200],
+                                    color: scoreColor,
+                                    strokeCap: StrokeCap.round,
+                                  ),
+                                ),
+                                Column(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    // 1. Text Pertanyaan (Ditaruh Kiri)
-                                    Expanded(
-                                      child: Text(
-                                        q['question'],
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
+                                    Text(
+                                      score.toStringAsFixed(0),
+                                      style: TextStyle(
+                                        fontSize: 36,
+                                        fontWeight: FontWeight.bold,
+                                        color: scoreColor,
                                       ),
                                     ),
-                                    const SizedBox(width: 10),
-                                    // 2. Icon Status (Ditaruh Kanan)
-                                    Icon(
-                                      isUserCorrect
-                                          ? Icons.check_circle
-                                          : Icons.cancel,
-                                      color: isUserCorrect
-                                          ? const Color(0xFF4CAF50)
-                                          : const Color(0xFFFF5252),
-                                      size:
-                                          24, // Sedikit lebih besar biar jelas
+                                    const Text(
+                                      "Score",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                        fontWeight: FontWeight.bold,
+                                      ),
                                     ),
                                   ],
                                 ),
+                              ],
+                            ),
 
-                                // ----------------------------------------------------
-                                const SizedBox(height: 10),
-                                // Jawaban Benar
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFE8F5E9),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    "Correct Answer: ${q['options'][q['correctIndex']]}",
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF2E7D32),
-                                    ),
-                                  ),
+                            const SizedBox(
+                              height: 25,
+                            ), // Jarak diperkecil dikit
+                            // 2. STATISTIK ROW
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                _buildStatItem(
+                                  "Correct",
+                                  correctCount,
+                                  const Color(0xFF4CAF50),
+                                  Icons.check_circle_outline,
                                 ),
-                                const SizedBox(height: 8),
-                                // Penjelasan
-                                Text(
-                                  q['explanation'] ?? "Tidak ada pembahasan.",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey[700],
-                                  ),
+                                Container(
+                                  width: 1,
+                                  height: 40,
+                                  color: Colors.grey[300],
+                                ),
+                                _buildStatItem(
+                                  "Wrong",
+                                  wrong,
+                                  const Color(0xFFFF5252),
+                                  Icons.highlight_off_rounded,
                                 ),
                               ],
                             ),
-                          );
-                        },
+
+                            const SizedBox(height: 25),
+                            const Divider(),
+                            const SizedBox(height: 15),
+
+                            // 3. LIST REVIEW JAWABAN
+                            if (questions != null && userAnswers != null) ...[
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  "Review Jawaban",
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.grey[800],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(height: 15),
+
+                              ListView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: questions!.length,
+                                itemBuilder: (context, index) {
+                                  return _buildReviewCard(index);
+                                },
+                              ),
+                              // Kasih jarak di bawah list biar ga nempel banget sama tombol
+                              const SizedBox(height: 10),
+                            ] else ...[
+                              const Text("Detail pembahasan tidak tersedia."),
+                              const SizedBox(height: 20),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
 
-                    // 4. RETAKE BUTTON
-                    SizedBox(
-                      width: double.infinity,
-                      height: 50,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Kirim sinyal 'retake' ke halaman Quiz
-                          Navigator.pop(context, 'retake');
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primarySalmon,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
+                    // B. AREA FIXED BOTTOM (Tombol)
+                    Container(
+                      padding: const EdgeInsets.fromLTRB(25, 10, 25, 25),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, -5),
                           ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          "Retake Quiz",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // TOMBOL 1: BACK
+                          SizedBox(
+                            width: double.infinity,
+                            height: 45,
+                            child: ElevatedButton(
+                              onPressed: () => Navigator.pop(context, 'close'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: primarySalmon,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                elevation: 0,
+                              ),
+                              child: const Text(
+                                "Back to Course",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 10),
+
+                          // TOMBOL 2: RETAKE
+                          SizedBox(
+                            width: double.infinity,
+                            height: 45,
+                            child: OutlinedButton(
+                              onPressed: () {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => MyCourseQuizPage(
+                                      quizId: quizId,
+                                      rawQuestions: rawQuestions,
+                                    ),
+                                  ),
+                                );
+                              },
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(
+                                  color: Color(0xFFFF9494),
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                              ),
+                              child: const Text(
+                                "Retake Quiz",
+                                style: TextStyle(
+                                  color: Color(0xFFFF9494),
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -284,9 +284,12 @@ class MyCourseScorePage extends StatelessWidget {
     );
   }
 
-  Widget _buildStatItem(String label, int value, Color color) {
+  // WIDGET HELPER: Item Statistik Kecil
+  Widget _buildStatItem(String label, int value, Color color, IconData icon) {
     return Column(
       children: [
+        Icon(icon, color: color, size: 28),
+        const SizedBox(height: 4),
         Text(
           "$value",
           style: TextStyle(
@@ -297,6 +300,155 @@ class MyCourseScorePage extends StatelessWidget {
         ),
         Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
       ],
+    );
+  }
+
+  // WIDGET HELPER: Kartu Review Per Soal
+  Widget _buildReviewCard(int index) {
+    final question = questions![index];
+
+    final String questionText = question['question_text'] ?? "No Question";
+    final List<dynamic> options = question['options'] ?? [];
+    final int correctAnswerIndex = question['correct_index'] ?? 0;
+    final String explanation =
+        question['explanation'] ?? "Tidak ada pembahasan untuk soal ini.";
+
+    final int userAnswerIndex =
+        (userAnswers != null && index < userAnswers!.length)
+        ? userAnswers![index]
+        : -1;
+
+    final bool isCorrect = userAnswerIndex == correctAnswerIndex;
+    final bool isSkipped = userAnswerIndex == -1;
+
+    Color statusColor = isCorrect
+        ? Colors.green
+        : (isSkipped ? Colors.orange : Colors.red);
+    String statusText = isCorrect
+        ? "Benar"
+        : (isSkipped ? "Dilewati" : "Salah");
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  "Soal ${index + 1} • $statusText",
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            questionText,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildAnswerRow(
+            "Jawaban Kamu:",
+            isSkipped ? "-" : options[userAnswerIndex],
+            isCorrect ? Colors.green : Colors.red,
+          ),
+          if (!isCorrect) ...[
+            const SizedBox(height: 4),
+            _buildAnswerRow(
+              "Jawaban Benar:",
+              options[correctAnswerIndex],
+              Colors.green,
+            ),
+          ],
+          const SizedBox(height: 15),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF8E1),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFFFE082)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: const [
+                    Icon(Icons.lightbulb, size: 16, color: Colors.orange),
+                    SizedBox(width: 5),
+                    Text(
+                      "Pembahasan:",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  explanation,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.grey[800],
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAnswerRow(String label, String answer, Color color) {
+    return RichText(
+      text: TextSpan(
+        style: const TextStyle(fontSize: 14, color: Colors.black),
+        children: [
+          TextSpan(
+            text: "$label ",
+            style: TextStyle(color: Colors.grey[600]),
+          ),
+          TextSpan(
+            text: answer,
+            style: TextStyle(fontWeight: FontWeight.bold, color: color),
+          ),
+        ],
+      ),
     );
   }
 }

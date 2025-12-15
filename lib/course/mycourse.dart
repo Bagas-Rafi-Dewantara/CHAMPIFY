@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-// import 'mycourse_playlist.dart';
-// import 'mycourse_quiz.dart';
+// Import file halaman detail yang baru (ASUMSI NAMA FILE: my_course_playlist_page.dart)
+import 'mycourse_playlist.dart';
+// import 'package:url_launcher/url_launcher.dart'; // Jika tidak dipakai, boleh dihapus
 
 // ==========================================
-// 1. KARTU MY COURSE (Dipanggil di courses.dart)
+// 1. KARTU MY COURSE
 // ==========================================
 class MyCourseCard extends StatelessWidget {
   final Map<String, dynamic> courseData;
@@ -14,12 +15,13 @@ class MyCourseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Navigasi ke halaman Playlist Course saat kartu diklik
+        // Navigasi ke Playlist dengan membawa SELURUH data course
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => PlaylistCoursePage(
-              courseTitle: courseData['nama_course'] ?? 'Course Detail',
+            builder: (context) => MyCoursePlaylistPage(
+              // DIGANTI ke MyCoursePlaylistPage
+              courseData: courseData, // Kirim Map data agar playlist dinamis
             ),
           ),
         );
@@ -28,22 +30,39 @@ class MyCourseCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 20),
         height: 160,
         width: double.infinity,
-        clipBehavior: Clip.hardEdge,
+        clipBehavior: Clip.hardEdge, // Memotong gambar bintang yang kelebihan
         decoration: BoxDecoration(
           color: const Color(0xFFFFDAB9), // Warna Peach
           borderRadius: BorderRadius.circular(20),
         ),
         child: Stack(
           children: [
-            // Konten Teks & Tombol
+            // --- GAMBAR BINTANG (ASSET) SESUAI REQUEST ---
+            Positioned(
+              bottom: -75,
+              right: 0,
+              child: IgnorePointer(
+                // Agar tidak menghalangi klik
+                child: Opacity(
+                  opacity: 0.9,
+                  child: Image.asset(
+                    'assets/images/star-course.png',
+                    width: 350,
+                    height: 350,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+            ),
+
+            // --- KONTEN TEKS & TOMBOL ---
             Padding(
               padding: const EdgeInsets.all(20.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   SizedBox(
-                    width:
-                        200, // Membatasi lebar teks agar tidak menabrak gambar
+                    width: 200, // Batasi lebar agar tidak menabrak bintang
                     child: Text(
                       courseData['nama_course'] ?? 'Judul Course',
                       style: const TextStyle(
@@ -52,7 +71,8 @@ class MyCourseCard extends StatelessWidget {
                         color: Color(0xFF2D2D2D),
                         height: 1.2,
                       ),
-                      // HAPUS maxLines dan overflow di sini agar text turun ke bawah
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   const Spacer(),
@@ -61,10 +81,9 @@ class MyCourseCard extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => PlaylistCoursePage(
-                            courseTitle:
-                                courseData['nama_course'] ?? 'Course Detail',
-                          ),
+                          builder: (context) => MyCoursePlaylistPage(
+                            courseData: courseData,
+                          ), // DIGANTI ke MyCoursePlaylistPage
                         ),
                       );
                     },
@@ -90,20 +109,6 @@ class MyCourseCard extends StatelessWidget {
                 ],
               ),
             ),
-
-            // --- GAMBAR BINTANG (ASSET) ---
-            Positioned(
-              bottom: -75,
-              right: 0,
-              child: IgnorePointer(
-                child: Image.asset(
-                  'assets/images/star-course.png', // Menggunakan aset gambar
-                  width: 350,
-                  height: 350,
-                  fit: BoxFit.contain,
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -112,11 +117,13 @@ class MyCourseCard extends StatelessWidget {
 }
 
 // ==========================================
-// 2. HALAMAN DETAIL PLAYLIST
+// 2. HALAMAN DETAIL PLAYLIST (LOGIC DINAMIS)
 // ==========================================
 class PlaylistCoursePage extends StatefulWidget {
-  final String courseTitle;
-  const PlaylistCoursePage({super.key, required this.courseTitle});
+  // Terima data lengkap agar bisa render list video dari DB
+  final Map<String, dynamic> courseData;
+
+  const PlaylistCoursePage({super.key, required this.courseData});
 
   @override
   State<PlaylistCoursePage> createState() => _PlaylistCoursePageState();
@@ -127,6 +134,8 @@ class _PlaylistCoursePageState extends State<PlaylistCoursePage> {
 
   @override
   Widget build(BuildContext context) {
+    final String courseTitle = widget.courseData['nama_course'] ?? 'Course';
+
     return Scaffold(
       body: Stack(
         children: [
@@ -190,7 +199,7 @@ class _PlaylistCoursePageState extends State<PlaylistCoursePage> {
                   children: [
                     // Judul Course Dinamis
                     Text(
-                      widget.courseTitle,
+                      courseTitle,
                       style: const TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -218,22 +227,8 @@ class _PlaylistCoursePageState extends State<PlaylistCoursePage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Content List
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.only(bottom: 50),
-                        itemCount: selectedTabIndex == 0 ? 6 : 3,
-                        itemBuilder: (context, index) {
-                          if (selectedTabIndex == 0) {
-                            return const PlaylistItem();
-                          } else if (selectedTabIndex == 1) {
-                            return QuizListItem(quizNumber: index + 1);
-                          } else {
-                            return ZoomListItem(index: index);
-                          }
-                        },
-                      ),
-                    ),
+                    // Content List (DINAMIS)
+                    Expanded(child: _buildContentList()),
                   ],
                 ),
               ),
@@ -242,6 +237,55 @@ class _PlaylistCoursePageState extends State<PlaylistCoursePage> {
         ],
       ),
     );
+  }
+
+  // --- LOGIC BUILD LIST DINAMIS ---
+  Widget _buildContentList() {
+    if (selectedTabIndex == 0) {
+      // 1. TAB PLAYLIST (Data dari Supabase)
+      final List<dynamic> playlist = widget.courseData['playlist'] ?? [];
+
+      // Sort berdasarkan nomor urut
+      playlist.sort(
+        (a, b) =>
+            (a['nomor_playlist'] ?? 0).compareTo(b['nomor_playlist'] ?? 0),
+      );
+
+      if (playlist.isEmpty) {
+        return const Center(child: Text("Belum ada materi video."));
+      }
+
+      return ListView.builder(
+        padding: const EdgeInsets.only(bottom: 50),
+        itemCount: playlist.length,
+        itemBuilder: (context, index) {
+          final video = playlist[index];
+          return PlaylistItem(
+            title: video['nama_playlist'] ?? "Video Materi ${index + 1}",
+            duration: video['durasi_video'] ?? "00:00",
+            linkVideo: video['link_video'],
+          );
+        },
+      );
+    } else if (selectedTabIndex == 1) {
+      // 2. TAB QUIZ (Static untuk saat ini)
+      return ListView.builder(
+        padding: const EdgeInsets.only(bottom: 50),
+        itemCount: 3,
+        itemBuilder: (context, index) {
+          return QuizListItem(quizNumber: index + 1);
+        },
+      );
+    } else {
+      // 3. TAB ZOOM (Static untuk saat ini)
+      return ListView.builder(
+        padding: const EdgeInsets.only(bottom: 50),
+        itemCount: 2,
+        itemBuilder: (context, index) {
+          return ZoomListItem(index: index);
+        },
+      );
+    }
   }
 
   Widget _buildTabItem(String title, int index) {
@@ -266,16 +310,30 @@ class _PlaylistCoursePageState extends State<PlaylistCoursePage> {
   }
 }
 
-// --- WIDGET PENDUKUNG (PLAYLIST, QUIZ, ZOOM) ---
+// --- WIDGET PENDUKUNG ---
 
 class PlaylistItem extends StatelessWidget {
-  const PlaylistItem({super.key});
+  final String title;
+  final String duration;
+  final String? linkVideo;
+
+  const PlaylistItem({
+    super.key,
+    required this.title,
+    required this.duration,
+    this.linkVideo,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // Navigator.push(context, MaterialPageRoute(builder: (context) => const MyCoursePlaylistPage()));
+        // Disini nanti bisa dipasang logika buka Video Player
+        if (linkVideo != null) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Memutar: $title")));
+        }
       },
       child: Container(
         margin: const EdgeInsets.only(bottom: 15),
@@ -300,20 +358,25 @@ class PlaylistItem extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 15),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "UI/UX Design Introduction",
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
-            const Text(
-              "02:00",
-              style: TextStyle(
+            Text(
+              duration,
+              style: const TextStyle(
                 fontWeight: FontWeight.bold,
                 color: Colors.grey,
                 fontSize: 12,
@@ -333,17 +396,17 @@ class QuizListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isCompleted = quizNumber == 1;
+    final bool isCompleted = quizNumber == 1; // Dummy logic
     final Color salmonColor = const Color(0xFFFFA08A);
 
     return GestureDetector(
       onTap: () {
         if (isCompleted) {
-          // Navigator.push(context, MaterialPageRoute(builder: (context) => const MyCourseQuizPage()));
+          // Navigasi ke Quiz Page (jika sudah ada)
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text("Finish previous quiz!"),
+              content: Text("Selesaikan kuis sebelumnya!"),
               duration: Duration(milliseconds: 500),
             ),
           );

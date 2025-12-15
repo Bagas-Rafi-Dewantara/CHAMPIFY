@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:youtube_player_flutter/youtube_player_flutter.dart'; // Pastikan package ini ada
+import 'package:youtube_player_flutter/youtube_player_flutter.dart';
+import '../payment.dart'; // Import halaman payment
+import '../main.dart'; // Akses supabase
 
 class DetailCoursePage extends StatefulWidget {
   final Map<String, dynamic> courseData;
@@ -15,6 +17,8 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
   int _selectedRatingFilter = 0;
   final Color primaryColor = const Color(0xFFFF9494);
 
+  bool _isCheckingStatus = false; // Loading saat cek status pembelian
+
   // --- STATE VIDEO PLAYER ---
   YoutubePlayerController? _controller;
   bool _isVideoPlaying = false;
@@ -23,6 +27,72 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
   void dispose() {
     _controller?.dispose();
     super.dispose();
+  }
+
+  // --- FUNGSI CEK PEMBELIAN SEBELUM BAYAR ---
+  // --- FUNGSI CEK PEMBELIAN SEBELUM BAYAR (FIXED) ---
+  Future<void> _handlePurchaseButton(String planType, double price) async {
+    setState(() => _isCheckingStatus = true);
+
+    try {
+      final user = supabase.auth.currentUser;
+
+      // 1. Cek Login
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Silahkan login terlebih dahulu.")),
+        );
+        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+        return;
+      }
+
+      // 2. Cek Database (Tabel 'transactions')
+      final idCourse = widget.courseData['id_course'];
+
+      final existingPurchase = await supabase
+          .from('transactions') // <--- NAMA TABEL YANG BENAR
+          .select('id_pembayaran')
+          .eq('id_pengguna', user.id)
+          .eq('id_course', idCourse)
+          .eq('payment_status', true) // <--- CEK BOOLEAN TRUE, BUKAN 'success'
+          .maybeSingle();
+
+      if (existingPurchase != null) {
+        // --- JIKA SUDAH BELI ---
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("You already bought this course!"),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        // --- JIKA BELUM BELI -> LANJUT KE PAYMENT ---
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CheckoutEmptyPage(
+                courseData: widget.courseData,
+                planType: planType,
+                price: price,
+              ),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint("Error checking purchase: $e");
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Terjadi kesalahan: $e")));
+      }
+    } finally {
+      if (mounted) setState(() => _isCheckingStatus = false);
+    }
   }
 
   // --- FUNGSI UTAMA PLAY VIDEO ---
@@ -109,8 +179,6 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
         ? "0.0/5"
         : "${averageRating.toStringAsFixed(1)}/5";
 
-    // --- WRAP SCAFFOLD DENGAN BUILDER UNTUK FULL SCREEN ---
-    // YoutubePlayerBuilder ini penting biar pas full screen dia nutupin seluruh layar (termasuk AppBar)
     return YoutubePlayerBuilder(
       player: YoutubePlayer(
         controller: _controller ?? YoutubePlayerController(initialVideoId: ""),
@@ -167,7 +235,6 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                             controller: _controller!,
                             showVideoProgressIndicator: true,
                             progressIndicatorColor: primaryColor,
-                            // Tombol Full Screen ada di UI default YoutubePlayer
                           )
                         : Stack(
                             alignment: Alignment.center,
@@ -382,7 +449,13 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                   width: double.infinity,
                   height: 45,
                   child: ElevatedButton(
-                    onPressed: () {},
+                    // --- TOMBOL PREMIUM DENGAN CEK STATUS ---
+                    onPressed: _isCheckingStatus
+                        ? null
+                        : () => _handlePurchaseButton(
+                            'Premium',
+                            pricePremium.toDouble(),
+                          ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: primaryColor,
                       shape: RoundedRectangleBorder(
@@ -390,14 +463,22 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                       ),
                       elevation: 0,
                     ),
-                    child: Text(
-                      "Premium Rp ${_formatCurrency(pricePremium)}",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
+                    child: _isCheckingStatus
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(
+                            "Premium Rp ${_formatCurrency(pricePremium)}",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -405,7 +486,13 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                   width: double.infinity,
                   height: 45,
                   child: OutlinedButton(
-                    onPressed: () {},
+                    // --- TOMBOL REGULAR DENGAN CEK STATUS ---
+                    onPressed: _isCheckingStatus
+                        ? null
+                        : () => _handlePurchaseButton(
+                            'Regular',
+                            priceRegular.toDouble(),
+                          ),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(color: primaryColor),
                       shape: RoundedRectangleBorder(

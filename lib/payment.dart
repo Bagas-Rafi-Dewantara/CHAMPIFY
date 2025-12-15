@@ -1,9 +1,38 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import '../main.dart'; // Akses supabase
+import 'navbar.dart';
 
-// 1. Checkout - Empty (Belum pilih payment)
+// Helper currency
+String _formatCurrency(num price) {
+  return price.toString().replaceAllMapped(
+    RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+    (Match m) => '${m[1]}.',
+  );
+}
+
+// Helper Safe Integer
+int _safeInt(dynamic value) {
+  if (value is int) return value;
+  if (value is String) return int.tryParse(value) ?? 0;
+  return 0;
+}
+
+// ==========================================
+// 1. CHECKOUT EMPTY
+// ==========================================
 class CheckoutEmptyPage extends StatelessWidget {
-  const CheckoutEmptyPage({Key? key}) : super(key: key);
+  final Map<String, dynamic> courseData;
+  final String planType;
+  final double price;
+
+  const CheckoutEmptyPage({
+    super.key,
+    required this.courseData,
+    required this.planType,
+    required this.price,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -34,26 +63,43 @@ class CheckoutEmptyPage extends StatelessWidget {
                   height: 60,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    gradient: LinearGradient(
-                      colors: [Colors.purple.shade200, Colors.pink.shade200],
-                    ),
+                    color: Colors.grey[200],
                   ),
-                  child: const Icon(Icons.phone_iphone, color: Colors.white, size: 30),
+                  child: courseData['link_gambar'] != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            courseData['link_gambar'],
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.phone_iphone,
+                          color: Colors.grey,
+                          size: 30,
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        'UI/UX Masterclass for Competition 2025',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        courseData['nama_course'] ?? 'Course Name',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                         maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
-                        'Type: Regular',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        'Type: $planType',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -72,7 +118,13 @@ class CheckoutEmptyPage extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const CheckoutFilledPage()),
+                  MaterialPageRoute(
+                    builder: (context) => CheckoutFilledPage(
+                      courseData: courseData,
+                      planType: planType,
+                      price: price,
+                    ),
+                  ),
                 );
               },
               child: Row(
@@ -88,38 +140,22 @@ class CheckoutEmptyPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Promo/Voucher
-            Row(
-              children: [
-                const Icon(Icons.local_offer_outlined, size: 20),
-                const SizedBox(width: 8),
-                const Text('Promo/Voucher', style: TextStyle(fontSize: 14)),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    'Add',
-                    style: TextStyle(color: Colors.orange),
-                  ),
-                ),
-              ],
-            ),
-            const Divider(),
-            const SizedBox(height: 16),
-
             // Price Details
             const Text(
               'Price Details',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildPriceRow('Harga Kursus', 'Rp150.000'),
+            _buildPriceRow('Harga Kursus', 'Rp${_formatCurrency(price)}'),
             const SizedBox(height: 8),
             _buildPriceRow('Biaya Admin', 'GRATIS', isGreen: true),
-            const SizedBox(height: 8),
-            _buildPriceRow('Promo', '-Rp0'),
             const Divider(height: 32),
-            _buildPriceRow('Total', 'Rp150.000', isBold: true, isOrange: true),
+            _buildPriceRow(
+              'Total',
+              'Rp${_formatCurrency(price)}',
+              isBold: true,
+              isOrange: true,
+            ),
             const Spacer(),
 
             // Confirm Button
@@ -128,13 +164,14 @@ class CheckoutEmptyPage extends StatelessWidget {
               height: 50,
               child: ElevatedButton(
                 onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const CheckoutFilledPage()),
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Silahkan pilih metode pembayaran"),
+                    ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE89B8E),
+                  backgroundColor: Colors.grey,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -151,8 +188,13 @@ class CheckoutEmptyPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPriceRow(String label, String value,
-      {bool isBold = false, bool isOrange = false, bool isGreen = false}) {
+  Widget _buildPriceRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    bool isOrange = false,
+    bool isGreen = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -170,9 +212,7 @@ class CheckoutEmptyPage extends StatelessWidget {
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             color: isOrange
                 ? Colors.orange
-                : isGreen
-                    ? Colors.green
-                    : Colors.black,
+                : (isGreen ? Colors.green : Colors.black),
           ),
         ),
       ],
@@ -180,12 +220,25 @@ class CheckoutEmptyPage extends StatelessWidget {
   }
 }
 
-// 2. Checkout - Filled (Sudah pilih BCA)
+// ==========================================
+// 2. CHECKOUT FILLED
+// ==========================================
 class CheckoutFilledPage extends StatelessWidget {
-  const CheckoutFilledPage({Key? key}) : super(key: key);
+  final Map<String, dynamic> courseData;
+  final String planType;
+  final double price;
+
+  const CheckoutFilledPage({
+    super.key,
+    required this.courseData,
+    required this.planType,
+    required this.price,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final double finalPrice = price + 8;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -213,26 +266,42 @@ class CheckoutFilledPage extends StatelessWidget {
                   height: 60,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
-                    gradient: LinearGradient(
-                      colors: [Colors.purple.shade200, Colors.pink.shade200],
-                    ),
+                    color: Colors.grey[200],
                   ),
-                  child: const Icon(Icons.phone_iphone, color: Colors.white, size: 30),
+                  child: courseData['link_gambar'] != null
+                      ? ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            courseData['link_gambar'],
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      : const Icon(
+                          Icons.phone_iphone,
+                          color: Colors.grey,
+                          size: 30,
+                        ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                    children: [
                       Text(
-                        'UI/UX Masterclass for Competition 2025',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                        courseData['nama_course'] ?? '',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                         maxLines: 2,
                       ),
-                      SizedBox(height: 4),
+                      const SizedBox(height: 4),
                       Text(
-                        'Type: Regular',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
+                        'Type: $planType',
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
@@ -260,42 +329,17 @@ class CheckoutFilledPage extends StatelessWidget {
                     style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                   ),
                   const Spacer(),
-                  Image.network(
-                    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Bank_Central_Asia.svg/200px-Bank_Central_Asia.svg.png',
-                    height: 20,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Text(
-                        'BCA',
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      );
-                    },
+                  const Text(
+                    'BCA',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 24),
-
-            // Promo/Voucher
-            Row(
-              children: [
-                const Icon(Icons.local_offer_outlined, size: 20),
-                const SizedBox(width: 8),
-                const Text('Promo/Voucher', style: TextStyle(fontSize: 14)),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text(
-                    'Add',
-                    style: TextStyle(color: Colors.orange),
-                  ),
-                ),
-              ],
-            ),
-            const Divider(),
-            const SizedBox(height: 16),
 
             // Price Details
             const Text(
@@ -303,13 +347,18 @@ class CheckoutFilledPage extends StatelessWidget {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            _buildPriceRow('Harga kursus', 'Rp150.000'),
+            _buildPriceRow('Harga kursus', 'Rp${_formatCurrency(price)}'),
             const SizedBox(height: 8),
             _buildPriceRow('Biaya Admin', 'GRATIS', isGreen: true),
             const SizedBox(height: 8),
-            _buildPriceRow('Promo', '-Rp0'),
+            _buildPriceRow('Kode Unik', 'Rp8'),
             const Divider(height: 32),
-            _buildPriceRow('Total', 'Rp150.000', isBold: true, isOrange: true),
+            _buildPriceRow(
+              'Total',
+              'Rp${_formatCurrency(finalPrice)}',
+              isBold: true,
+              isOrange: true,
+            ),
             const Spacer(),
 
             // Confirm Button
@@ -320,7 +369,13 @@ class CheckoutFilledPage extends StatelessWidget {
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const WaitingPaymentPage()),
+                    MaterialPageRoute(
+                      builder: (context) => WaitingPaymentPage(
+                        courseData: courseData,
+                        planType: planType,
+                        finalPrice: finalPrice,
+                      ),
+                    ),
                   );
                 },
                 style: ElevatedButton.styleFrom(
@@ -341,8 +396,13 @@ class CheckoutFilledPage extends StatelessWidget {
     );
   }
 
-  Widget _buildPriceRow(String label, String value,
-      {bool isBold = false, bool isOrange = false, bool isGreen = false}) {
+  Widget _buildPriceRow(
+    String label,
+    String value, {
+    bool isBold = false,
+    bool isOrange = false,
+    bool isGreen = false,
+  }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -360,9 +420,7 @@ class CheckoutFilledPage extends StatelessWidget {
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
             color: isOrange
                 ? Colors.orange
-                : isGreen
-                    ? Colors.green
-                    : Colors.black,
+                : (isGreen ? Colors.green : Colors.black),
           ),
         ),
       ],
@@ -370,9 +428,86 @@ class CheckoutFilledPage extends StatelessWidget {
   }
 }
 
-// 3. Waiting for Payment
-class WaitingPaymentPage extends StatelessWidget {
-  const WaitingPaymentPage({Key? key}) : super(key: key);
+// ==========================================
+// 3. WAITING PAYMENT
+// ==========================================
+class WaitingPaymentPage extends StatefulWidget {
+  final Map<String, dynamic> courseData;
+  final String planType;
+  final double finalPrice;
+
+  const WaitingPaymentPage({
+    super.key,
+    required this.courseData,
+    required this.planType,
+    required this.finalPrice,
+  });
+
+  @override
+  State<WaitingPaymentPage> createState() => _WaitingPaymentPageState();
+}
+
+class _WaitingPaymentPageState extends State<WaitingPaymentPage> {
+  bool isLoading = false;
+
+  Future<void> _handleConfirmPayment() async {
+    setState(() => isLoading = true);
+
+    try {
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        // ... (handle user null)
+        return;
+      }
+
+      // --- LOGIKA SESUAI SCHEMA DATABASE KAMU ---
+      final String idPengguna = user.id;
+      final int idCourse = _safeInt(widget.courseData['id_course']);
+
+      final double price = widget.finalPrice - 8;
+
+      // 1. Simpan ke Tabel 'transactions'
+      // ... (Supabase insert ke transactions)
+      await supabase.from('transactions').insert({
+        'id_pengguna': idPengguna,
+        'id_course': idCourse,
+        'price': price,
+        'admin_fee': 0,
+        'total_amount': widget.finalPrice,
+        // Status di-set TRUE (Sukses) karena ini adalah konfirmasi akhir
+        'payment_status': true,
+        'payment_date': DateTime.now().toIso8601String(),
+        'tipe_paket': widget.planType,
+      });
+
+      // 2. Simpan juga ke Tabel 'mycourse'
+      // Penting: Pastikan tidak ada duplikasi ID Course di mycourse
+      // Supabase biasanya akan throw error jika ada constraint unique/PK duplikat.
+      // Jika Anda tidak menggunakan UNIQUE constraint di mycourse (id_pengguna, id_course),
+      // kode ini akan menambahkan entri baru. Asumsi Anda mengizinkan.
+      await supabase.from('mycourse').insert({
+        'id_pengguna': idPengguna,
+        'id_course': idCourse,
+      });
+
+      // 3. Pindah ke Halaman Sukses (yg akan mengalihkan ke My Course)
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const PaymentSuccessPage()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menyimpan transaksi: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -397,7 +532,7 @@ class WaitingPaymentPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Payment Info
+            // Payment Info Box
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -406,11 +541,16 @@ class WaitingPaymentPage extends StatelessWidget {
                 border: Border.all(color: Colors.grey.shade200),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildInfoRow('ID Pesanan', 'ID-111TS2324-21MM01'),
+                  _buildInfoRow(
+                    'ID Pesanan',
+                    'ID-${DateTime.now().millisecondsSinceEpoch}',
+                  ),
                   const SizedBox(height: 12),
-                  _buildInfoRow('Waktu Pesanan', '28 Juni 2025 • 10:00'),
+                  _buildInfoRow(
+                    'Waktu Pesanan',
+                    DateFormat('dd MMM yyyy • HH:mm').format(DateTime.now()),
+                  ),
                   const SizedBox(height: 12),
                   Row(
                     children: [
@@ -420,7 +560,10 @@ class WaitingPaymentPage extends StatelessWidget {
                       ),
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.yellow.shade100,
                           borderRadius: BorderRadius.circular(6),
@@ -441,34 +584,6 @@ class WaitingPaymentPage extends StatelessWidget {
             ),
             const SizedBox(height: 24),
 
-            // Countdown Timer
-            Center(
-              child: Column(
-                children: [
-                  const Text(
-                    'Batas waktu pembayaran',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    '23:59:59',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.orange,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Silahkan lakukan pembayaran sebelum\nKamis, 28 Juni 2025 • 10:00',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-
             // Nominal Payment
             const Text(
               'Nominal pembayaran',
@@ -477,9 +592,9 @@ class WaitingPaymentPage extends StatelessWidget {
             const SizedBox(height: 8),
             Row(
               children: [
-                const Text(
-                  'Rp150.008',
-                  style: TextStyle(
+                Text(
+                  'Rp${_formatCurrency(widget.finalPrice)}',
+                  style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFFE89B8E),
@@ -489,7 +604,9 @@ class WaitingPaymentPage extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.copy, size: 20),
                   onPressed: () {
-                    Clipboard.setData(const ClipboardData(text: '150008'));
+                    Clipboard.setData(
+                      ClipboardData(text: widget.finalPrice.toStringAsFixed(0)),
+                    );
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Nominal disalin!')),
                     );
@@ -497,13 +614,9 @@ class WaitingPaymentPage extends StatelessWidget {
                 ),
               ],
             ),
-            Text(
-              'Masukkan nominal pembayaran sesuai dengan 3-digit\nkode unik yang tertera di atas.',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-            ),
             const SizedBox(height: 24),
 
-            // Bank Account
+            // Bank Account (Static)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -512,19 +625,13 @@ class WaitingPaymentPage extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Image.network(
-                    'https://upload.wikimedia.org/wikipedia/commons/thumb/5/5c/Bank_Central_Asia.svg/200px-Bank_Central_Asia.svg.png',
-                    height: 30,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Text(
-                        'BCA',
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 24,
-                        ),
-                      );
-                    },
+                  const Text(
+                    'BCA',
+                    style: TextStyle(
+                      color: Colors.blue,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Row(
@@ -532,65 +639,47 @@ class WaitingPaymentPage extends StatelessWidget {
                     children: [
                       const Text(
                         '943 9423 0492',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       IconButton(
                         icon: const Icon(Icons.copy, size: 18),
                         onPressed: () {
-                          Clipboard.setData(const ClipboardData(text: '9439423492'));
+                          Clipboard.setData(
+                            const ClipboardData(text: '9439423492'),
+                          );
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Nomor rekening disalin!')),
+                            const SnackBar(content: Text('Rekening disalin!')),
                           );
                         },
                       ),
                     ],
                   ),
-                  const SizedBox(height: 8),
-                  _buildInfoRow('Nama Bank', 'Bank Central Asia'),
-                  const SizedBox(height: 8),
-                  _buildInfoRow('Nama Pemilik Rekening', 'PT Cosmo Generasi Emas'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
 
-            // Purchase Item
-            const Text(
-              'Pembelian',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    gradient: LinearGradient(
-                      colors: [Colors.purple.shade200, Colors.pink.shade200],
-                    ),
-                  ),
-                  child: const Icon(Icons.phone_iphone, color: Colors.white, size: 24),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: const [
+                  // --- BAGIAN TAMPILAN ATAS-BAWAH CENTER ---
+                  const SizedBox(height: 12),
+                  const Column(
+                    children: [
                       Text(
-                        'UI/UX Masterclass for Competition 2025',
-                        style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                        'Nama Pemilik Rekening',
+                        style: TextStyle(fontSize: 13, color: Colors.grey),
                       ),
                       SizedBox(height: 4),
                       Text(
-                        'Type: Regular',
-                        style: TextStyle(color: Colors.grey, fontSize: 11),
+                        'PT Champify Generasi Emas',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                  // ------------------------------------------
+                ],
+              ),
             ),
             const SizedBox(height: 24),
 
@@ -600,13 +689,18 @@ class WaitingPaymentPage extends StatelessWidget {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
-            _buildInfoRow('Harga kursus', 'Rp150.000'),
-            const SizedBox(height: 8),
-            _buildInfoRow('Biaya Admin', 'GRATIS'),
+            _buildInfoRow(
+              'Harga kursus',
+              'Rp${_formatCurrency(widget.finalPrice - 8)}',
+            ),
             const SizedBox(height: 8),
             _buildInfoRow('Kode Unik', 'Rp8'),
             const Divider(height: 24),
-            _buildInfoRow('Total', 'Rp150.008', isBold: true),
+            _buildInfoRow(
+              'Total',
+              'Rp${_formatCurrency(widget.finalPrice)}',
+              isBold: true,
+            ),
             const SizedBox(height: 24),
 
             // Payment Confirmation Button
@@ -614,22 +708,26 @@ class WaitingPaymentPage extends StatelessWidget {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const PaymentSuccessPage()),
-                  );
-                },
+                onPressed: isLoading ? null : _handleConfirmPayment,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFE89B8E),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                child: const Text(
-                  'Konfirmasi Pembayaran',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
-                ),
+                child: isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text(
+                        'Konfirmasi Pembayaran',
+                        style: TextStyle(fontSize: 16, color: Colors.white),
+                      ),
               ),
             ),
           ],
@@ -641,6 +739,7 @@ class WaitingPaymentPage extends StatelessWidget {
   Widget _buildInfoRow(String label, String value, {bool isBold = false}) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.center, // Center vertikal
       children: [
         Text(
           label,
@@ -650,11 +749,15 @@ class WaitingPaymentPage extends StatelessWidget {
             fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
           ),
         ),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+            ),
           ),
         ),
       ],
@@ -662,14 +765,47 @@ class WaitingPaymentPage extends StatelessWidget {
   }
 }
 
-// 4. Payment Success
 class PaymentSuccessPage extends StatelessWidget {
   const PaymentSuccessPage({Key? key}) : super(key: key);
+
+  // Helper untuk navigasi tombol ke Available Course (default tab Course)
+  void _goToAvailableCourse(BuildContext context) {
+    // Arahkan langsung ke Navbar tab Course -> My Course
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const Navbar(initialIndex: 1, initialSelectMyCourse: true),
+      ),
+      (route) => false,
+    );
+  }
+
+  // Helper untuk navigasi tombol ke My Course (tab My Course)
+  void _goToMyCourse(BuildContext context) {
+    // Arahkan langsung ke Navbar tab Course -> My Course
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const Navbar(initialIndex: 1, initialSelectMyCourse: true),
+      ),
+      (route) => false,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
+      // --- Tombol Back (Kembali ke Halaman Available Course/Main Page) ---
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          // Aksi: Kembali ke My Course (langsung ke Navbar Course)
+          onPressed: () => _goToMyCourse(context),
+        ),
+      ),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(40.0),
@@ -681,7 +817,6 @@ class PaymentSuccessPage extends StatelessWidget {
                 style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 40),
-              // Success Icon/Illustration
               Container(
                 width: 200,
                 height: 200,
@@ -689,76 +824,8 @@ class PaymentSuccessPage extends StatelessWidget {
                   color: Colors.yellow.shade100,
                   shape: BoxShape.circle,
                 ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Star character
-                    const Text(
-                      '⭐',
-                      style: TextStyle(fontSize: 120),
-                    ),
-                    // Confetti elements
-                    Positioned(
-                      top: 20,
-                      right: 30,
-                      child: Transform.rotate(
-                        angle: 0.3,
-                        child: Container(
-                          width: 30,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 40,
-                      left: 20,
-                      child: Transform.rotate(
-                        angle: -0.5,
-                        child: Container(
-                          width: 25,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Colors.blue,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 30,
-                      right: 20,
-                      child: Transform.rotate(
-                        angle: 0.8,
-                        child: Container(
-                          width: 28,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Colors.green,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 40,
-                      left: 30,
-                      child: Transform.rotate(
-                        angle: -0.3,
-                        child: Container(
-                          width: 22,
-                          height: 8,
-                          decoration: BoxDecoration(
-                            color: Colors.orange,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                child: const Center(
+                  child: Text('⭐', style: TextStyle(fontSize: 120)),
                 ),
               ),
               const SizedBox(height: 60),
@@ -766,10 +833,8 @@ class PaymentSuccessPage extends StatelessWidget {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    // Navigate back to home
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
+                  // Aksi: Langsung ke My Course
+                  onPressed: () => _goToMyCourse(context),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE89B8E),
                     shape: RoundedRectangleBorder(
@@ -777,7 +842,7 @@ class PaymentSuccessPage extends StatelessWidget {
                     ),
                   ),
                   child: const Text(
-                    'Kembali ke Beranda',
+                    'Lanjut ke My Course',
                     style: TextStyle(fontSize: 16, color: Colors.white),
                   ),
                 ),
