@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../main.dart'; // Akses supabase
-import 'detail_course.dart'; // Pastikan file ini ada
-import 'mycourse.dart'; // <--- IMPORT PENTING
+import '../main.dart'; // Access to supabase
+import 'detail_course.dart';
+import 'mycourse.dart'; // Contains MyCourseCard and PlaylistCoursePage
 
 class CoursePage extends StatefulWidget {
   const CoursePage({super.key});
@@ -12,34 +12,93 @@ class CoursePage extends StatefulWidget {
 
 class _CoursePageState extends State<CoursePage> {
   bool isAvailableSelected = true;
-  List<Map<String, dynamic>> courseList = [];
+
+  // Separate lists for data
+  List<Map<String, dynamic>> availableCourseList = [];
+  List<Map<String, dynamic>> myCourseList = [];
+
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchCourses();
+    // Fetch both lists when the page loads
+    fetchAllData();
   }
 
-  Future<void> fetchCourses() async {
+  Future<void> fetchAllData() async {
+    setState(() => isLoading = true);
+    await Future.wait([fetchAvailableCourses(), fetchMyCourses()]);
+    if (mounted) {
+      setState(() => isLoading = false);
+    }
+  }
+
+  // 1. Fetch ALL courses for "Available" tab
+  Future<void> fetchAvailableCourses() async {
     try {
-      // PERUBAHAN ADA DI SINI:
-      // '*, mentor(*)' artinya: Ambil semua kolom course, DAN gabungkan dengan tabel mentor
       final data = await supabase
           .from('course')
           .select('*, mentor(*), playlist(*), rating(*, pengguna(*))');
-      setState(() {
-        courseList = List<Map<String, dynamic>>.from(data);
-        isLoading = false;
-      });
+
+      if (mounted) {
+        setState(() {
+          availableCourseList = List<Map<String, dynamic>>.from(data);
+        });
+      }
     } catch (e) {
-      debugPrint('Error fetching courses: $e');
-      setState(() => isLoading = false);
+      debugPrint('Error fetching available courses: $e');
+    }
+  }
+
+  // 2. Fetch PURCHASED courses for "My Course" tab
+  Future<void> fetchMyCourses() async {
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) return;
+
+      // A. Get user ID from 'pengguna' table based on Auth ID
+      // Make sure your column name is correct (e.g., 'id_auth' or 'uid')
+      final userData = await supabase
+          .from('pengguna')
+          .select('id_pengguna')
+          .eq('id_auth', user.id)
+          .single();
+
+      final int idPengguna = userData['id_pengguna'];
+
+      // B. Fetch transactions for this user and join with course details
+      // We assume the table is named 'transaksi' and has a foreign key to 'course'
+      final data = await supabase
+          .from('transaksi')
+          .select('course(*, mentor(*), playlist(*), rating(*, pengguna(*)))')
+          .eq('id_pengguna', idPengguna);
+
+      // C. Extract the 'course' object from the transaction result
+      List<Map<String, dynamic>> tempCourses = [];
+      for (var item in (data as List)) {
+        if (item['course'] != null) {
+          tempCourses.add(item['course']);
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          myCourseList = tempCourses;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching my courses: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Determine which list to show
+    final currentList = isAvailableSelected
+        ? availableCourseList
+        : myCourseList;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -125,11 +184,17 @@ class _CoursePageState extends State<CoursePage> {
             Expanded(
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : courseList.isEmpty
-                  ? const Center(child: Text("Belum ada course."))
+                  : currentList.isEmpty
+                  ? Center(
+                      child: Text(
+                        isAvailableSelected
+                            ? "No available courses."
+                            : "You haven't bought any courses yet.",
+                      ),
+                    )
                   : isAvailableSelected
                   ? GridView.builder(
-                      itemCount: courseList.length,
+                      itemCount: currentList.length,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
@@ -138,13 +203,13 @@ class _CoursePageState extends State<CoursePage> {
                             childAspectRatio: 0.75,
                           ),
                       itemBuilder: (context, index) =>
-                          AvailableCourseCard(courseData: courseList[index]),
+                          AvailableCourseCard(courseData: currentList[index]),
                     )
                   : ListView.builder(
-                      itemCount: courseList.length,
+                      itemCount: currentList.length,
                       itemBuilder: (context, index) =>
-                          // Mengambil Widget dari mycourse.dart
-                          MyCourseCard(courseData: courseList[index]),
+                          // Use the Widget from mycourse.dart
+                          MyCourseCard(courseData: currentList[index]),
                     ),
             ),
           ],
@@ -154,6 +219,7 @@ class _CoursePageState extends State<CoursePage> {
   }
 }
 
+// ... Keep AvailableCourseCard as it is ...
 class AvailableCourseCard extends StatelessWidget {
   final Map<String, dynamic> courseData;
   const AvailableCourseCard({super.key, required this.courseData});
@@ -183,7 +249,6 @@ class AvailableCourseCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Bagian Gambar
             ClipRRect(
               borderRadius: const BorderRadius.vertical(
                 top: Radius.circular(15),
@@ -200,8 +265,6 @@ class AvailableCourseCard extends StatelessWidget {
                     : const Icon(Icons.bar_chart, color: Colors.white),
               ),
             ),
-
-            // Bagian Teks Judul & Lesson
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(10.0),
@@ -210,7 +273,6 @@ class AvailableCourseCard extends StatelessWidget {
                   children: [
                     Text(
                       courseData['nama_course'] ?? 'Tanpa Judul',
-                      // Hapus maxLines dan overflow agar turun ke bawah (wrap)
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
