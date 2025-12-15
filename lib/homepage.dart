@@ -5,7 +5,7 @@ import 'mentoring.dart';
 import 'course/detail_course.dart';
 import 'competition.dart' hide supabase;
 import 'course/courses.dart';
-import 'course/mycourse_quiz.dart';
+// import 'course/mycourse_quiz.dart'; <--- SUDAH DIHAPUS
 
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
@@ -312,19 +312,7 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
-            _buildFeatureItem(
-              Icons.article,
-              'Quiz',
-              const Color(0xFFE8D4A0),
-              () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const MyCourseQuizPage(),
-                  ),
-                );
-              },
-            ),
+            // --- BAGIAN QUIZ SUDAH DIHAPUS ---
             _buildFeatureItem(
               Icons.emoji_events,
               'Competition',

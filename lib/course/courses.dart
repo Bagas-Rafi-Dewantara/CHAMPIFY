@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
-import '../main.dart'; // Access to supabase
+import '../main.dart'; // Akses supabase
 import 'detail_course.dart';
-import 'mycourse.dart'; // Contains MyCourseCard and PlaylistCoursePage
+import 'mycourse.dart'; // File yang berisi MyCourseCard
 
 class CoursePage extends StatefulWidget {
-  const CoursePage({super.key});
+  final bool initialSelectMyCourse;
+  const CoursePage({super.key, this.initialSelectMyCourse = false});
 
   @override
   State<CoursePage> createState() => _CoursePageState();
 }
 
 class _CoursePageState extends State<CoursePage> {
+  // Tetap menggunakan boolean karena tampilan Anda saat ini hanya 2 tab
   bool isAvailableSelected = true;
 
-  // Separate lists for data
+  // Dua list terpisah untuk menampung data
   List<Map<String, dynamic>> availableCourseList = [];
   List<Map<String, dynamic>> myCourseList = [];
 
@@ -22,8 +24,26 @@ class _CoursePageState extends State<CoursePage> {
   @override
   void initState() {
     super.initState();
-    // Fetch both lists when the page loads
-    fetchAllData();
+    // Set tab awal dari prop jika diminta
+    if (widget.initialSelectMyCourse && isAvailableSelected) {
+      isAvailableSelected = false;
+    }
+    // Tangkap argumen navigasi jika ada (fallback)
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final args = ModalRoute.of(context)?.settings.arguments;
+      if (args is Map) {
+        final bool selectMyCourse = args['selectMyCourse'] == true;
+        final dynamic initialTab = args['initialTab'];
+        final bool goToMyCourse = selectMyCourse || initialTab == 'MyCourse';
+        if (goToMyCourse && isAvailableSelected) {
+          setState(() {
+            isAvailableSelected = false;
+          });
+        }
+      }
+      // Lanjutkan fetch data setelah inisialisasi state selesai
+      fetchAllData();
+    });
   }
 
   Future<void> fetchAllData() async {
@@ -34,7 +54,7 @@ class _CoursePageState extends State<CoursePage> {
     }
   }
 
-  // 1. Fetch ALL courses for "Available" tab
+  // 1. Fetch COURSE (Tab Available)
   Future<void> fetchAvailableCourses() async {
     try {
       final data = await supabase
@@ -51,35 +71,68 @@ class _CoursePageState extends State<CoursePage> {
     }
   }
 
-  // 2. Fetch PURCHASED courses for "My Course" tab
+  // 2. Fetch MY COURSE (Tab My Course)
   Future<void> fetchMyCourses() async {
     try {
       final user = supabase.auth.currentUser;
       if (user == null) return;
 
-      // A. Get user ID from 'pengguna' table based on Auth ID
-      // Make sure your column name is correct (e.g., 'id_auth' or 'uid')
-      final userData = await supabase
-          .from('pengguna')
-          .select('id_pengguna')
-          .eq('id_auth', user.id)
-          .single();
+      // 1. Ambil ID Course yang dimiliki pengguna
+      final List<dynamic> myCourseEntries = await supabase
+          .from('mycourse')
+          .select('id_course')
+          .eq('id_pengguna', user.id);
 
-      final int idPengguna = userData['id_pengguna'];
+      final List<int> courseIds = myCourseEntries
+          .map((e) => e['id_course'] as int)
+          .toList();
 
-      // B. Fetch transactions for this user and join with course details
-      // We assume the table is named 'transaksi' and has a foreign key to 'course'
-      final data = await supabase
-          .from('transaksi')
-          .select('course(*, mentor(*), playlist(*), rating(*, pengguna(*)))')
-          .eq('id_pengguna', idPengguna);
+      if (courseIds.isEmpty) {
+        if (mounted) setState(() => myCourseList = []);
+        return;
+      }
 
-      // C. Extract the 'course' object from the transaction result
-      List<Map<String, dynamic>> tempCourses = [];
-      for (var item in (data as List)) {
-        if (item['course'] != null) {
-          tempCourses.add(item['course']);
+      final List<Map<String, dynamic>> tempCourses = [];
+
+      // 2. Loop setiap Course ID
+      for (var id in courseIds) {
+        // A. AMBIL DATA LENGKAP TERMASUK QUIZ & SOAL (Nested Join)
+        // PERHATIKAN BAGIAN .select() DI BAWAH INI:
+        final courseDataList = await supabase
+            .from('course')
+            .select('''
+              *, 
+              mentor(*), 
+              playlist(*), 
+              rating(*, pengguna(*)),
+              zoom(*),
+              quiz(
+                *,
+                soal_kuis(*)
+              )
+            ''')
+            .eq('id_course', id)
+            .single();
+
+        // B. Ambil TIPE PAKET TERAKHIR
+        final List<dynamic> transactionData = await supabase
+            .from('transactions')
+            .select('tipe_paket')
+            .eq('id_pengguna', user.id)
+            .eq('id_course', id)
+            .order('payment_date', ascending: false)
+            .limit(1);
+
+        Map<String, dynamic> combinedData = Map.from(courseDataList);
+
+        if (transactionData.isNotEmpty) {
+          combinedData['tipe_paket_dibeli'] =
+              transactionData.first['tipe_paket'] ?? 'Reguler';
+        } else {
+          combinedData['tipe_paket_dibeli'] = 'Reguler';
         }
+
+        tempCourses.add(combinedData);
       }
 
       if (mounted) {
@@ -94,7 +147,7 @@ class _CoursePageState extends State<CoursePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Determine which list to show
+    // Tentukan list mana yang ditampilkan berdasarkan Tab
     final currentList = isAvailableSelected
         ? availableCourseList
         : myCourseList;
@@ -186,10 +239,24 @@ class _CoursePageState extends State<CoursePage> {
                   ? const Center(child: CircularProgressIndicator())
                   : currentList.isEmpty
                   ? Center(
-                      child: Text(
-                        isAvailableSelected
-                            ? "No available courses."
-                            : "You haven't bought any courses yet.",
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isAvailableSelected
+                                ? Icons.class_outlined
+                                : Icons.shopping_bag_outlined,
+                            size: 60,
+                            color: Colors.grey[300],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            isAvailableSelected
+                                ? "Belum ada course tersedia."
+                                : "Kamu belum membeli course apapun.",
+                            style: TextStyle(color: Colors.grey[500]),
+                          ),
+                        ],
                       ),
                     )
                   : isAvailableSelected
@@ -208,7 +275,7 @@ class _CoursePageState extends State<CoursePage> {
                   : ListView.builder(
                       itemCount: currentList.length,
                       itemBuilder: (context, index) =>
-                          // Use the Widget from mycourse.dart
+                          // MyCourseCard kini menerima data yang sudah dilengkapi dengan 'tipe_paket_dibeli'
                           MyCourseCard(courseData: currentList[index]),
                     ),
             ),
@@ -219,7 +286,7 @@ class _CoursePageState extends State<CoursePage> {
   }
 }
 
-// ... Keep AvailableCourseCard as it is ...
+// ... KARTU AVAILABLE TETAP SAMA ...
 class AvailableCourseCard extends StatelessWidget {
   final Map<String, dynamic> courseData;
   const AvailableCourseCard({super.key, required this.courseData});
@@ -261,6 +328,8 @@ class AvailableCourseCard extends StatelessWidget {
                     ? Image.network(
                         courseData['link_gambar'],
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.broken_image, color: Colors.white),
                       )
                     : const Icon(Icons.bar_chart, color: Colors.white),
               ),
@@ -277,6 +346,8 @@ class AvailableCourseCard extends StatelessWidget {
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 4),
                     Text(
