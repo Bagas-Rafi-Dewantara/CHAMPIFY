@@ -90,11 +90,10 @@ class _NavbarState extends State<Navbar> {
             left: 0,
             right: 0,
             child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(30),
-                ),
+                borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
                     blurRadius: 20,
@@ -103,7 +102,6 @@ class _NavbarState extends State<Navbar> {
                   ),
                 ],
               ),
-              margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
               child: Padding(
                 padding: const EdgeInsets.all(5),
                 child: GNav(

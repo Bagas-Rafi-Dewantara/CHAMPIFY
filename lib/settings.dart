@@ -146,168 +146,213 @@ class _SettingsPageState extends State<SettingsPage> {
       backgroundColor: Colors.white,
       body: SingleChildScrollView(
         padding: EdgeInsets.only(bottom: scrollBottomPadding),
-            child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Search Bar
-                TextField(
-                  controller: _searchController,
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Cari...',
-                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                    filled: true,
-                    fillColor: const Color(0xFFEEEEF3),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Search Bar
+              TextField(
+                controller: _searchController,
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                },
+                decoration: InputDecoration(
+                  hintText: 'Cari...',
+                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                  filled: true,
+                  fillColor: const Color(0xFFEEEEF3),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // --- PROFILE SECTION (KLIK UNTUK LOGIN) ---
+              GestureDetector(
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProfilePage(),
                     ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
+                  );
+                  await supabase.auth.refreshSession();
+                  _loadProfile();
+                },
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 35,
+                        backgroundColor: Colors.grey.shade300,
+                        backgroundImage: _avatarUrl != null
+                            ? NetworkImage(_avatarUrl!)
+                            : null,
+                        child: _avatarUrl == null
+                            ? const Icon(Icons.person, color: Colors.white)
+                            : null,
+                      ),
+                      const SizedBox(width: 15),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _displayName,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            _email.isEmpty ? 'Lengkapi email Anda' : _email,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              if (_searchQuery.isEmpty) ...[
+                // Kelola Konten Section
+                const Text(
+                  'Kelola Konten',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: List.generate(contentItems.length, (index) {
+                      final item = contentItems[index];
+                      return _buildMenuItemInContainer(
+                        icon: item.icon,
+                        title: item.title,
+                        isFirst: index == 0,
+                        isLast: index == contentItems.length - 1,
+                        onTap: item.onTap,
+                      );
+                    }),
                   ),
                 ),
 
                 const SizedBox(height: 30),
 
-                // --- PROFILE SECTION (KLIK UNTUK LOGIN) ---
-                GestureDetector(
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const ProfilePage(),
-                      ),
-                    );
-                    await supabase.auth.refreshSession();
-                    _loadProfile();
-                  },
-                  child: Container(
+                // Pilihan Section
+                const Text(
+                  'Pilihan',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+
+                const SizedBox(height: 15),
+
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    children: List.generate(optionItems.length, (index) {
+                      final item = optionItems[index];
+                      return _buildMenuItemInContainer(
+                        icon: item.icon,
+                        title: item.title,
+                        isFirst: index == 0,
+                        isLast: index == optionItems.length - 1,
+                        trailing: item.trailing,
+                        onTap: item.onTap,
+                      );
+                    }),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+              ] else ...[
+                const Text(
+                  'Hasil Pencarian',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                if (filteredItems.isEmpty)
+                  Container(
+                    width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
                     ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 35,
-                          backgroundColor: Colors.grey.shade300,
-                          backgroundImage: _avatarUrl != null
-                              ? NetworkImage(_avatarUrl!)
-                              : null,
-                          child: _avatarUrl == null
-                              ? const Icon(Icons.person, color: Colors.white)
-                              : null,
-                        ),
-                        const SizedBox(width: 15),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _displayName,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _email.isEmpty ? 'Lengkapi email Anda' : _email,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Spacer(),
-                        const Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                          color: Colors.grey,
-                        ),
-                      ],
+                    child: const Text(
+                      'Tidak ada hasil yang cocok.',
+                      style: TextStyle(color: Colors.grey),
                     ),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                if (_searchQuery.isEmpty) ...[
-                  // Kelola Konten Section
-                  const Text(
-                    'Kelola Konten',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
+                  )
+                else
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
-                      children: List.generate(contentItems.length, (index) {
-                        final item = contentItems[index];
+                      children: List.generate(filteredItems.length, (index) {
+                        final item = filteredItems[index];
                         return _buildMenuItemInContainer(
                           icon: item.icon,
                           title: item.title,
                           isFirst: index == 0,
-                          isLast: index == contentItems.length - 1,
-                          onTap: item.onTap,
-                        );
-                      }),
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // Pilihan Section
-                  const Text(
-                    'Pilihan',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: List.generate(optionItems.length, (index) {
-                        final item = optionItems[index];
-                        return _buildMenuItemInContainer(
-                          icon: item.icon,
-                          title: item.title,
-                          isFirst: index == 0,
-                          isLast: index == optionItems.length - 1,
+                          isLast: index == filteredItems.length - 1,
                           trailing: item.trailing,
                           onTap: item.onTap,
                         );
@@ -315,93 +360,46 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
 
-                  const SizedBox(height: 20),
-                ] else ...[
-                  const Text(
-                    'Hasil Pencarian',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
+                const SizedBox(height: 20),
+              ],
+
+              // Log Out Button
+              GestureDetector(
+                onTap: () async {
+                  await supabase.auth.signOut();
+                  if (!mounted) return;
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(builder: (_) => const LoginPage()),
+                    (_) => false,
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red, width: 1.5),
                   ),
-                  const SizedBox(height: 12),
-                  if (filteredItems.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Text(
-                        'Tidak ada hasil yang cocok.',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    )
-                  else
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        children: List.generate(filteredItems.length, (index) {
-                          final item = filteredItems[index];
-                          return _buildMenuItemInContainer(
-                            icon: item.icon,
-                            title: item.title,
-                            isFirst: index == 0,
-                            isLast: index == filteredItems.length - 1,
-                            trailing: item.trailing,
-                            onTap: item.onTap,
-                          );
-                        }),
-                      ),
-                    ),
-
-                  const SizedBox(height: 20),
-                ],
-
-                // Log Out Button
-                GestureDetector(
-                  onTap: () async {
-                    await supabase.auth.signOut();
-                    if (!mounted) return;
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(builder: (_) => const LoginPage()),
-                      (_) => false,
-                    );
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.red, width: 1.5),
-                    ),
-                    child: const Center(
-                      child: Text(
-                        'Log Out',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.red,
-                        ),
+                  child: const Center(
+                    child: Text(
+                      'Log Out',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.red,
                       ),
                     ),
                   ),
                 ),
+              ),
 
-                const SizedBox(height: 30),
-              ],
-            ),
+              const SizedBox(height: 30),
+            ],
           ),
         ),
       ),
-      // NAVBAR DIHAPUS DARI SINI
     );
   }
 
