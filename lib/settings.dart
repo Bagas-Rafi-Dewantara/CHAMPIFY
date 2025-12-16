@@ -3,6 +3,7 @@ import 'authentication/login.dart'; // Pastikan import ini ada
 import 'recommendation_settings.dart';
 import 'notification_settings.dart';
 import 'terms_conditions.dart';
+import 'privacy_policy.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -12,7 +13,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool isDarkMode = false;
 
   @override
   Widget build(BuildContext context) {
@@ -186,7 +186,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         title: 'Kebijakan Privasi',
                         isFirst: false,
                         isLast: true,
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PrivacyPolicyPage(),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -219,7 +226,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         icon: Icons.language,
                         title: 'Bahasa',
                         isFirst: true,
-                        isLast: false,
+                        isLast: true,
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: const [
@@ -238,44 +245,7 @@ class _SettingsPageState extends State<SettingsPage> {
                             ),
                           ],
                         ),
-                        onTap: () {},
-                      ),
-                      // Dark Mode Toggle
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.dark_mode_outlined,
-                              color: Colors.black87,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 15),
-                            const Expanded(
-                              child: Text(
-                                'Mode gelap',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ),
-                            Switch(
-                              value: isDarkMode,
-                              onChanged: (value) {
-                                setState(() {
-                                  isDarkMode = value;
-                                });
-                              },
-                              activeColor: const Color(0xFFE89B8E),
-                              inactiveThumbColor: Colors.grey,
-                              inactiveTrackColor: Colors.grey.shade300,
-                            ),
-                          ],
-                        ),
+                        onTap: _showLanguageSheet,
                       ),
                     ],
                   ),
@@ -316,6 +286,58 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
       ),
       // NAVBAR DIHAPUS DARI SINI
+    );
+  }
+
+  void _showLanguageSheet() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(height: 12),
+              const Text(
+                'Pilih Bahasa',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              ListTile(
+                leading: const Icon(Icons.flag, color: Colors.black87),
+                title: const Text('Bahasa Indonesia'),
+                subtitle: const Text('Sedang digunakan'),
+                trailing: const Icon(Icons.check_circle, color: Color(0xFFE89B8E)),
+                onTap: () => Navigator.pop(context),
+              ),
+              ListTile(
+                leading: const Icon(Icons.flag_outlined, color: Colors.grey),
+                title: const Text('English'),
+                subtitle: const Text('Belum tersedia'),
+                enabled: false,
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'Coming Soon',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        );
+      },
     );
   }
 
