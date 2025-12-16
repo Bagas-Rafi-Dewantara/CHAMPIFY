@@ -330,8 +330,11 @@ class _PrivacyPoint extends StatelessWidget {
   final IconData icon;
   final String text;
 
-  const _PrivacyPoint({Key? key, required this.icon, required this.text})
-    : super(key: key);
+  const _PrivacyPoint({
+    Key? key,
+    required this.icon,
+    required this.text,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

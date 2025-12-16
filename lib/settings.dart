@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'authentication/login.dart'; // Pastikan import ini ada
 import 'recommendation_settings.dart';
 import 'notification_settings.dart';
 import 'terms_conditions.dart';
 import 'privacy_policy.dart';
+import 'profile_page.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -13,7 +13,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,11 +52,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 // --- PROFILE SECTION (KLIK UNTUK LOGIN) ---
                 GestureDetector(
                   onTap: () {
-                    // Navigasi ke Halaman Login saat profile diklik
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const LoginPage(),
+                        builder: (context) => const ProfilePage(),
                       ),
                     );
                   },
@@ -303,17 +301,17 @@ class _SettingsPageState extends State<SettingsPage> {
               const SizedBox(height: 12),
               const Text(
                 'Pilih Bahasa',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               ListTile(
                 leading: const Icon(Icons.flag, color: Colors.black87),
                 title: const Text('Bahasa Indonesia'),
                 subtitle: const Text('Sedang digunakan'),
-                trailing: const Icon(Icons.check_circle, color: Color(0xFFE89B8E)),
+                trailing: const Icon(
+                  Icons.check_circle,
+                  color: Color(0xFFE89B8E),
+                ),
                 onTap: () => Navigator.pop(context),
               ),
               ListTile(
@@ -322,7 +320,10 @@ class _SettingsPageState extends State<SettingsPage> {
                 subtitle: const Text('Belum tersedia'),
                 enabled: false,
                 trailing: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(12),
