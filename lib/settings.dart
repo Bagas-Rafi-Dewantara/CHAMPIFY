@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'authentication/login.dart'; // Pastikan import ini ada
 import 'recommendation_settings.dart';
 import 'notification_settings.dart';
+import 'terms_conditions.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -171,7 +172,14 @@ class _SettingsPageState extends State<SettingsPage> {
                         title: 'Syarat & Ketentuan',
                         isFirst: false,
                         isLast: false,
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const TermsConditionsPage(),
+                            ),
+                          );
+                        },
                       ),
                       _buildMenuItemInContainer(
                         icon: Icons.shield_outlined,
