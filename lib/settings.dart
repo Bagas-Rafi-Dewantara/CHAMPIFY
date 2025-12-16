@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'authentication/login.dart'; // Pastikan import ini ada
+import 'recommendation_settings.dart';
+import 'notification_settings.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -139,14 +141,30 @@ class _SettingsPageState extends State<SettingsPage> {
                         title: 'Rekomendasi',
                         isFirst: true,
                         isLast: false,
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const RecommendationSettingsPage(),
+                            ),
+                          );
+                        },
                       ),
                       _buildMenuItemInContainer(
                         icon: Icons.notifications_outlined,
                         title: 'Notifikasi',
                         isFirst: false,
                         isLast: false,
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const NotificationSettingsPage(),
+                            ),
+                          );
+                        },
                       ),
                       _buildMenuItemInContainer(
                         icon: Icons.description_outlined,
