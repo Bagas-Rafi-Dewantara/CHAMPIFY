@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'main.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
   const NotificationSettingsPage({Key? key}) : super(key: key);
@@ -9,6 +12,9 @@ class NotificationSettingsPage extends StatefulWidget {
 }
 
 class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
+  bool _loading = true;
+  bool _saving = false;
+
   // State untuk toggle notifikasi utama
   bool enableNotifications = true;
 
@@ -44,6 +50,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   bool quietHoursEnabled = false;
 
   @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -65,11 +77,18 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
+        physics: _loading ? const NeverScrollableScrollPhysics() : null,
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_loading)
+                const LinearProgressIndicator(
+                  color: Color(0xFFE89B8E),
+                  minHeight: 2,
+                ),
+              if (_loading) const SizedBox(height: 16),
               // Header Description
               Container(
                 padding: const EdgeInsets.all(16),
@@ -574,6 +593,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               // Save Button
               GestureDetector(
                 onTap: () {
+                  if (_saving) return;
                   _saveSettings();
                 },
                 child: Container(
@@ -583,15 +603,26 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                     color: const Color(0xFFE89B8E),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Center(
-                    child: Text(
-                      'Simpan Pengaturan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+                  child: Center(
+                    child: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Text(
+                            'Simpan Pengaturan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -602,6 +633,51 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _loadSettings() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      setState(() => _loading = false);
+      return;
+    }
+
+    final meta = user.userMetadata ?? {};
+    final existing = meta['notification_settings'];
+
+    if (existing is Map) {
+      setState(() {
+        enableNotifications = existing['enable_notifications'] as bool? ?? true;
+        courseUpdates = existing['course_updates'] as bool? ?? true;
+        newCourseAvailable = existing['new_course_available'] as bool? ?? true;
+        courseReminders = existing['course_reminders'] as bool? ?? true;
+        assignmentDeadlines = existing['assignment_deadlines'] as bool? ?? true;
+        competitionUpdates = existing['competition_updates'] as bool? ?? true;
+        competitionReminders =
+            existing['competition_reminders'] as bool? ?? true;
+        competitionResults = existing['competition_results'] as bool? ?? true;
+        newCompetition = existing['new_competition'] as bool? ?? true;
+        mentoringSchedule = existing['mentoring_schedule'] as bool? ?? true;
+        mentorMessages = existing['mentor_messages'] as bool? ?? true;
+        sessionReminders = existing['session_reminders'] as bool? ?? true;
+        systemUpdates = existing['system_updates'] as bool? ?? true;
+        promotions = existing['promotions'] as bool? ?? false;
+        newsletter = existing['newsletter'] as bool? ?? false;
+        soundEnabled = existing['sound_enabled'] as bool? ?? true;
+        vibrationEnabled = existing['vibration_enabled'] as bool? ?? true;
+        quietHoursEnabled = existing['quiet_hours_enabled'] as bool? ?? false;
+        quietHoursStart = _parseTimeOfDay(
+          existing['quiet_hours_start'] as String?,
+          quietHoursStart,
+        );
+        quietHoursEnd = _parseTimeOfDay(
+          existing['quiet_hours_end'] as String?,
+          quietHoursEnd,
+        );
+      });
+    }
+
+    setState(() => _loading = false);
   }
 
   Widget _buildToggleItem({
@@ -733,29 +809,100 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     }
   }
 
-  void _saveSettings() {
-    // Di sini Anda bisa menambahkan logika untuk menyimpan pengaturan
-    // Misalnya ke SharedPreferences atau database
+  String _formatTimeOfDay(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: const [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 10),
-            Text('Pengaturan notifikasi berhasil disimpan!'),
-          ],
+  TimeOfDay _parseTimeOfDay(String? value, TimeOfDay fallback) {
+    if (value == null || !value.contains(':')) return fallback;
+    final parts = value.split(':');
+    if (parts.length != 2) return fallback;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return fallback;
+    return TimeOfDay(hour: hour, minute: minute);
+  }
+
+  Future<void> _saveSettings() async {
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan login untuk menyimpan pengaturan'),
+          backgroundColor: Color(0xFFE89B8E),
         ),
-        backgroundColor: const Color(0xFFE89B8E),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+      );
+      return;
+    }
 
-    // Optional: Kembali ke halaman settings setelah 1 detik
-    Future.delayed(const Duration(seconds: 1), () {
-      Navigator.pop(context);
-    });
+    setState(() => _saving = true);
+
+    final payload = {
+      'enable_notifications': enableNotifications,
+      'course_updates': courseUpdates,
+      'new_course_available': newCourseAvailable,
+      'course_reminders': courseReminders,
+      'assignment_deadlines': assignmentDeadlines,
+      'competition_updates': competitionUpdates,
+      'competition_reminders': competitionReminders,
+      'competition_results': competitionResults,
+      'new_competition': newCompetition,
+      'mentoring_schedule': mentoringSchedule,
+      'mentor_messages': mentorMessages,
+      'session_reminders': sessionReminders,
+      'system_updates': systemUpdates,
+      'promotions': promotions,
+      'newsletter': newsletter,
+      'sound_enabled': soundEnabled,
+      'vibration_enabled': vibrationEnabled,
+      'quiet_hours_enabled': quietHoursEnabled,
+      'quiet_hours_start': _formatTimeOfDay(quietHoursStart),
+      'quiet_hours_end': _formatTimeOfDay(quietHoursEnd),
+    };
+
+    final updatedMeta = {
+      ...(user.userMetadata ?? {}),
+      'notification_settings': payload,
+    };
+
+    try {
+      await supabase.auth.updateUser(UserAttributes(data: updatedMeta));
+      await supabase.auth.refreshSession();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 10),
+              Text('Pengaturan notifikasi berhasil disimpan!'),
+            ],
+          ),
+          backgroundColor: const Color(0xFFE89B8E),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+
+      Navigator.pop(context, payload);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan: $e'),
+          backgroundColor: Colors.red.shade400,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 }

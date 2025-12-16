@@ -4,6 +4,8 @@ import 'notification_settings.dart';
 import 'terms_conditions.dart';
 import 'privacy_policy.dart';
 import 'profile_page.dart';
+import 'main.dart';
+import 'authentication/login.dart' show LoginPage;
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -13,6 +15,29 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  String _displayName = 'Pengguna';
+  String _email = '';
+  String? _avatarUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  void _loadProfile() {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+    setState(() {
+      _displayName =
+          user.userMetadata?['full_name'] ??
+          user.email?.split('@').first ??
+          'Pengguna';
+      _email = user.email ?? '';
+      _avatarUrl = user.userMetadata?['avatar_url'];
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,13 +76,15 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 // --- PROFILE SECTION (KLIK UNTUK LOGIN) ---
                 GestureDetector(
-                  onTap: () {
-                    Navigator.push(
+                  onTap: () async {
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const ProfilePage(),
                       ),
                     );
+                    await supabase.auth.refreshSession();
+                    _loadProfile();
                   },
                   child: Container(
                     padding: const EdgeInsets.all(16),
@@ -74,28 +101,32 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                     child: Row(
                       children: [
-                        const CircleAvatar(
+                        CircleAvatar(
                           radius: 35,
-                          backgroundImage: NetworkImage(
-                            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
-                          ),
+                          backgroundColor: Colors.grey.shade300,
+                          backgroundImage: _avatarUrl != null
+                              ? NetworkImage(_avatarUrl!)
+                              : null,
+                          child: _avatarUrl == null
+                              ? const Icon(Icons.person, color: Colors.white)
+                              : null,
                         ),
                         const SizedBox(width: 15),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
+                          children: [
                             Text(
-                              'Divavor Permata',
-                              style: TextStyle(
+                              _displayName,
+                              style: const TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.black,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            const SizedBox(height: 4),
                             Text(
-                              'divavor@gmail.com',
-                              style: TextStyle(
+                              _email.isEmpty ? 'Lengkapi email Anda' : _email,
+                              style: const TextStyle(
                                 fontSize: 14,
                                 color: Colors.grey,
                               ),
@@ -147,7 +178,10 @@ class _SettingsPageState extends State<SettingsPage> {
                               builder: (context) =>
                                   const RecommendationSettingsPage(),
                             ),
-                          );
+                          ).then((_) async {
+                            await supabase.auth.refreshSession();
+                            _loadProfile();
+                          });
                         },
                       ),
                       _buildMenuItemInContainer(
@@ -162,7 +196,10 @@ class _SettingsPageState extends State<SettingsPage> {
                               builder: (context) =>
                                   const NotificationSettingsPage(),
                             ),
-                          );
+                          ).then((_) async {
+                            await supabase.auth.refreshSession();
+                            _loadProfile();
+                          });
                         },
                       ),
                       _buildMenuItemInContainer(
@@ -253,8 +290,14 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 // Log Out Button
                 GestureDetector(
-                  onTap: () {
-                    // Logic Logout bisa ditaruh sini
+                  onTap: () async {
+                    await supabase.auth.signOut();
+                    if (!mounted) return;
+                    Navigator.pushAndRemoveUntil(
+                      context,
+                      MaterialPageRoute(builder: (_) => const LoginPage()),
+                      (_) => false,
+                    );
                   },
                   child: Container(
                     width: double.infinity,

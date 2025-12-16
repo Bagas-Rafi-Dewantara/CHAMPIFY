@@ -5,6 +5,7 @@ import 'mentoring.dart';
 import 'course/detail_course.dart';
 import 'competition.dart' hide supabase;
 import 'course/courses.dart';
+import 'profile_page.dart';
 // import 'course/mycourse_quiz.dart'; <--- SUDAH DIHAPUS
 
 class HomePage extends StatefulWidget {
@@ -34,6 +35,7 @@ class _HomePageState extends State<HomePage> {
   // --- STATE UNTUK DATA PENGGUNA (HEADER) ---
   String _userName = 'Pengguna'; // Default name
   bool _isUserLoading = true;
+  String? _avatarUrl;
 
   @override
   void initState() {
@@ -47,7 +49,7 @@ class _HomePageState extends State<HomePage> {
     // Timer untuk Carousel
     _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
       // Menggunakan panjang list kompetisi yang dinamis
-      int totalItems = _competitionList.length; 
+      int totalItems = _competitionList.length;
       if (totalItems > 0) {
         if (_currentPage < totalItems - 1) {
           _currentPage++;
@@ -70,8 +72,19 @@ class _HomePageState extends State<HomePage> {
     try {
       final date = DateTime.parse(dateString);
       const List<String> monthNames = [
-        '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 
-        'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+        '',
+        'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember',
       ];
       return '${date.day} ${monthNames[date.month]} ${date.year}';
     } catch (e) {
@@ -112,20 +125,23 @@ class _HomePageState extends State<HomePage> {
       final allActiveData = await supabase
           .from('competition')
           .select('*')
-          .or('status.eq.ongoing,status.eq.almost over') // <--- PERBAIKAN UTAMA DI SINI
-          .order('end_date', ascending: true) 
+          .or(
+            'status.eq.ongoing,status.eq.almost over',
+          ) // <--- PERBAIKAN UTAMA DI SINI
+          .order('end_date', ascending: true)
           .limit(5);
 
       // Filter untuk memisahkan 2 Almost Over dan 3 On Going (berdasarkan urutan tanggal)
-      final List<Map<String, dynamic>> combinedData = List<Map<String, dynamic>>.from(allActiveData);
-      
+      final List<Map<String, dynamic>> combinedData =
+          List<Map<String, dynamic>>.from(allActiveData);
+
       // Logika untuk menentukan status tampilan
       if (mounted) {
         setState(() {
           _competitionList = combinedData.map((comp) {
-            final String dbStatus = comp['status'].toString().toLowerCase(); 
+            final String dbStatus = comp['status'].toString().toLowerCase();
             // Cek kolom image_url dulu, jika kosong, pakai kolom poster
-            final String imageUrl = comp['image_url'] ?? comp['poster'] ?? ''; 
+            final String imageUrl = comp['image_url'] ?? comp['poster'] ?? '';
 
             String displayStatus;
             if (dbStatus == 'almost over') {
@@ -136,21 +152,21 @@ class _HomePageState extends State<HomePage> {
               // Default jika ada status lain yang terambil
               displayStatus = 'On Going';
             }
-            
+
             return {
               ...comp,
-              'image_url_final': imageUrl, // Tambahkan kunci untuk gambar yang pasti ada
+              'image_url_final':
+                  imageUrl, // Tambahkan kunci untuk gambar yang pasti ada
               'display_status': displayStatus,
             };
           }).toList();
 
           _isLoadingCompetitions = false;
-          
+
           // Atur ulang PageController jika list tidak kosong
           if (_competitionList.isNotEmpty) {
             _currentPage = 0; // Reset ke halaman pertama
           }
-
         });
       }
     } catch (e) {
@@ -168,8 +184,10 @@ class _HomePageState extends State<HomePage> {
       // Kita ambil semua data dan filter di sisi Flutter
       final data = await supabase
           .from('zoom')
-          .select('*, mentor(*)') 
-          .limit(10); // Ambil lebih banyak data (atau semua jika tidak terlalu banyak)
+          .select('*, mentor(*)')
+          .limit(
+            10,
+          ); // Ambil lebih banyak data (atau semua jika tidak terlalu banyak)
 
       // --- TAMBAHKAN DEBUGGING INI ---
       debugPrint('Supabase data received: $data');
@@ -182,12 +200,14 @@ class _HomePageState extends State<HomePage> {
               try {
                 // Pastikan kolom 'date' tidak null
                 if (m['date'] == null) return false;
-                
+
                 final meetingDate = DateTime.parse(m['date']);
                 // Gunakan isAfter(yesterday) untuk menyertakan hari ini (00:00:00)
-                final yesterday = DateTime.now().subtract(const Duration(hours: 24));
-                
-                return meetingDate.isAfter(yesterday); 
+                final yesterday = DateTime.now().subtract(
+                  const Duration(hours: 24),
+                );
+
+                return meetingDate.isAfter(yesterday);
               } catch (e) {
                 debugPrint('Error parsing date for meeting: ${m['date']}');
                 return false;
@@ -202,14 +222,13 @@ class _HomePageState extends State<HomePage> {
                 final dateB = DateTime.parse(b['date']);
                 return dateA.compareTo(dateB);
               });
-              
+
               _upcomingMeeting = futureMeetings.first;
             } else {
               _upcomingMeeting = null;
             }
-            
           } else {
-            _upcomingMeeting = null; 
+            _upcomingMeeting = null;
           }
           _isLoadingMeeting = false;
         });
@@ -227,7 +246,17 @@ class _HomePageState extends State<HomePage> {
   Future<void> _fetchUserData() async {
     // *ASUMSI: Anda sudah memiliki ID pengguna yang sedang login*
     // Contoh jika menggunakan Supabase Auth:
-    final currentUserId = supabase.auth.currentUser?.id; 
+    final user = supabase.auth.currentUser;
+    final currentUserId = user?.id;
+
+    if (user != null) {
+      // Gunakan metadata untuk respon cepat di header
+      _userName =
+          user.userMetadata?['full_name'] ??
+          user.email?.split('@').first ??
+          'Pengguna';
+      _avatarUrl = user.userMetadata?['avatar_url'];
+    }
 
     if (currentUserId == null) {
       if (mounted) {
@@ -244,12 +273,15 @@ class _HomePageState extends State<HomePage> {
       final data = await supabase
           .from('pengguna')
           .select('full_name') // Hanya ambil kolom full_name
-          .eq('id_pengguna', currentUserId) // Asumsi kolom ID di tabel 'pengguna' bernama 'id_pengguna'
+          .eq(
+            'id_pengguna',
+            currentUserId,
+          ) // Asumsi kolom ID di tabel 'pengguna' bernama 'id_pengguna'
           .single(); // Ambil hanya satu baris
 
       if (mounted) {
         setState(() {
-          final String fullName = data['full_name'] ?? 'Pengguna';
+          final String fullName = data['full_name'] ?? _userName;
           _userName = fullName;
           _isUserLoading = false;
         });
@@ -326,8 +358,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   // ========================================
-// HEADER SECTION (SUDAH DINAMIS)
-// ========================================
+  // HEADER SECTION (SUDAH DINAMIS)
+  // ========================================
 
   Widget _buildHeader() {
     // Tampilkan loading sebentar jika data pengguna sedang diambil
@@ -349,8 +381,11 @@ class _HomePageState extends State<HomePage> {
                 const Text('Hello, ', style: TextStyle(fontSize: 24)),
                 Text(
                   // Menggunakan state _userName yang sudah dimuat dari DB
-                  _userName, 
-                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  _userName,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ],
             ),
@@ -361,10 +396,23 @@ class _HomePageState extends State<HomePage> {
             ),
           ],
         ),
-        const CircleAvatar(
-          radius: 28,
-          backgroundImage: NetworkImage(
-            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
+        InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ProfilePage()),
+            );
+          },
+          borderRadius: BorderRadius.circular(32),
+          child: CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.grey.shade300,
+            backgroundImage: _avatarUrl != null
+                ? NetworkImage(_avatarUrl!)
+                : null,
+            child: _avatarUrl == null
+                ? const Icon(Icons.person, color: Colors.white)
+                : null,
           ),
         ),
       ],
@@ -805,7 +853,7 @@ class _HomePageState extends State<HomePage> {
   // COMPETITION CAROUSEL
   // ========================================
 
-Widget _buildCompetitionCarousel() {
+  Widget _buildCompetitionCarousel() {
     // 1. Tampilkan Loading
     if (_isLoadingCompetitions) {
       return const SizedBox(
@@ -813,12 +861,14 @@ Widget _buildCompetitionCarousel() {
         child: Center(child: CircularProgressIndicator()),
       );
     }
-    
+
     // 2. Tampilkan pesan jika data kosong
     if (_competitionList.isEmpty) {
       return const SizedBox(
         height: 100,
-        child: Center(child: Text("Belum ada kompetisi yang sedang berlangsung.")),
+        child: Center(
+          child: Text("Belum ada kompetisi yang sedang berlangsung."),
+        ),
       );
     }
 
@@ -831,9 +881,14 @@ Widget _buildCompetitionCarousel() {
         itemCount: _competitionList.length, // <--- Jumlah item dari data DB
         itemBuilder: (context, index) {
           final competition = _competitionList[index]; // Ambil data
-          final String imageUrl = competition['image_url'] ?? competition['poster'] ?? ''; // Ambil link gambar dari kolom DB
+          final String imageUrl =
+              competition['image_url'] ??
+              competition['poster'] ??
+              ''; // Ambil link gambar dari kolom DB
           final String title = competition['title'] ?? 'No Title';
-          final String status = competition['display_status'] ?? 'Closed'; // Status yang sudah dihitung
+          final String status =
+              competition['display_status'] ??
+              'Closed'; // Status yang sudah dihitung
 
           return AnimatedBuilder(
             animation: _pageController,
@@ -856,11 +911,7 @@ Widget _buildCompetitionCarousel() {
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8.0),
                 // Kirim data yang sudah diekstrak ke card
-                child: _buildCompetitionCard(
-                  imageUrl,
-                  title,
-                  status,
-                ),
+                child: _buildCompetitionCard(imageUrl, title, status),
               ),
             ),
           );

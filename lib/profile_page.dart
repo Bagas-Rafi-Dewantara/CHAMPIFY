@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+
 import 'authentication/login.dart' show LoginPage;
 import 'main.dart';
 import 'navbar.dart';
+import 'profile_edit_page.dart';
 
 const Color kProfileThemeColor = Color(0xFFE89B8E);
 
@@ -16,6 +18,12 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _loading = true;
   String _displayName = 'Pengguna';
   String _email = '';
+  String _headline = '';
+  String _city = '';
+  String _major = '';
+  String _university = '';
+  String? _avatarUrl;
+  String? _phone;
   int _courseCount = 0;
   int _quizCount = 0;
   double _avgScore = 0;
@@ -40,12 +48,20 @@ class _ProfilePageState extends State<ProfilePage> {
     }
 
     setState(() {
-      _displayName = user.userMetadata?['full_name'] ?? user.email?.split('@').first ?? 'Pengguna';
+      _displayName =
+          user.userMetadata?['full_name'] ??
+          user.email?.split('@').first ??
+          'Pengguna';
       _email = user.email ?? '-';
+      _headline = user.userMetadata?['headline'] ?? '';
+      _city = user.userMetadata?['city'] ?? '';
+      _major = user.userMetadata?['major'] ?? '';
+      _university = user.userMetadata?['university'] ?? '';
+      _avatarUrl = user.userMetadata?['avatar_url'];
+      _phone = user.userMetadata?['phone'];
     });
 
     try {
-      // Ambil daftar course yang dimiliki
       final myCourseEntries = await supabase
           .from('mycourse')
           .select('id_course')
@@ -55,20 +71,22 @@ class _ProfilePageState extends State<ProfilePage> {
           .map((e) => e['id_course'] as int)
           .toList();
 
-      // Ambil detail course (nama, mentor, gambar)
       List<Map<String, dynamic>> courseDetails = [];
       if (courseIds.isNotEmpty) {
-        courseDetails = await Future.wait(courseIds.map((id) async {
-          final data = await supabase
-              .from('course')
-              .select('id_course, nama_course, link_gambar, jumlah_lesson, mentor(nama_mentor)')
-              .eq('id_course', id)
-              .single();
-          return Map<String, dynamic>.from(data);
-        }));
+        courseDetails = await Future.wait(
+          courseIds.map((id) async {
+            final data = await supabase
+                .from('course')
+                .select(
+                  'id_course, nama_course, link_gambar, jumlah_lesson, mentor(nama_mentor)',
+                )
+                .eq('id_course', id)
+                .single();
+            return Map<String, dynamic>.from(data);
+          }),
+        );
       }
 
-      // Ambil statistik quiz
       final quizScores = await supabase
           .from('quiz_score')
           .select('skor')
@@ -135,7 +153,9 @@ class _ProfilePageState extends State<ProfilePage> {
 
   Widget _buildBody() {
     if (_loading) {
-      return const Center(child: CircularProgressIndicator(color: kProfileThemeColor));
+      return const Center(
+        child: CircularProgressIndicator(color: kProfileThemeColor),
+      );
     }
 
     if (_error != null) {
@@ -160,7 +180,10 @@ class _ProfilePageState extends State<ProfilePage> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: kProfileThemeColor,
                 elevation: 0,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
+                ),
               ),
               child: const Text('Login'),
             ),
@@ -310,7 +333,10 @@ class _ProfilePageState extends State<ProfilePage> {
                   },
                   child: const Text(
                     'Keluar dari akun',
-                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -321,125 +347,187 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: _openEditProfilePage,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          const CircleAvatar(
-            radius: 36,
-            backgroundImage: NetworkImage(
-              'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop',
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _displayName,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _email,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: kProfileThemeColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    'Aktif belajar',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: kProfileThemeColor,
+          child: Row(
+            children: [
+              _avatarUrl != null
+                  ? CircleAvatar(
+                      radius: 36,
+                      backgroundImage: NetworkImage(_avatarUrl!),
+                    )
+                  : CircleAvatar(
+                      radius: 36,
+                      backgroundColor: Colors.grey.shade300,
+                      child: const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 30,
+                      ),
                     ),
-                  ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _displayName,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _email,
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
+                    if (_headline.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        _headline,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                    if (_major.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        _major,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                    if (_university.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        _university,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                    if (_city.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        '📍 $_city',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: kProfileThemeColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Text(
+                        'Aktif belajar',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: kProfileThemeColor,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              const Icon(Icons.edit_outlined, color: kProfileThemeColor),
+            ],
           ),
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.edit_outlined, color: kProfileThemeColor),
-          ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildQuizCard() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+        onTap: _goToCourses,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
           ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: kProfileThemeColor.withOpacity(0.12),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.verified_outlined, color: kProfileThemeColor),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Progress Quiz',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: kProfileThemeColor.withOpacity(0.12),
+                  shape: BoxShape.circle,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  _quizCount == 0
-                      ? 'Belum ada quiz yang diselesaikan'
-                      : '$_quizCount quiz dikerjakan • Rata-rata skor ${_avgScore.toStringAsFixed(0)}',
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                child: const Icon(
+                  Icons.verified_outlined,
+                  color: kProfileThemeColor,
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Progress Quiz',
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _quizCount == 0
+                          ? 'Belum ada quiz yang diselesaikan'
+                          : '$_quizCount quiz dikerjakan • Rata-rata skor ${_avgScore.toStringAsFixed(0)}',
+                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+            ],
           ),
-          const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
-        ],
+        ),
       ),
     );
   }
@@ -471,9 +559,31 @@ class _ProfilePageState extends State<ProfilePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => const Navbar(initialIndex: 1, initialSelectMyCourse: true),
+        builder: (_) =>
+            const Navbar(initialIndex: 1, initialSelectMyCourse: true),
       ),
     );
+  }
+
+  Future<void> _openEditProfilePage() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const ProfileEditPage()),
+    );
+
+    if (result is Map) {
+      setState(() {
+        _displayName = result['name'] ?? _displayName;
+        _headline = result['headline'] ?? _headline;
+        _city = result['city'] ?? _city;
+        _major = result['major'] ?? _major;
+        _university = result['university'] ?? _university;
+        _avatarUrl = result['avatar_url'] ?? _avatarUrl;
+        _email = result['email'] ?? _email;
+        _phone = result['phone'] ?? _phone;
+      });
+      await supabase.auth.refreshSession();
+    }
   }
 }
 
@@ -526,10 +636,7 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-            ),
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
         ],
       ),
@@ -567,13 +674,13 @@ class _CourseTile extends StatelessWidget {
             height: 52,
             color: Colors.grey.shade200,
             child: course['link_gambar'] != null
-              ? Image.network(
-                course['link_gambar'],
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.broken_image, color: Colors.grey),
-                )
-              : const Icon(Icons.play_circle_fill, color: kProfileThemeColor),
+                ? Image.network(
+                    course['link_gambar'],
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) =>
+                        const Icon(Icons.broken_image, color: Colors.grey),
+                  )
+                : const Icon(Icons.play_circle_fill, color: kProfileThemeColor),
           ),
         ),
         title: Text(
@@ -590,13 +697,17 @@ class _CourseTile extends StatelessWidget {
           'Mentor: $mentorName • ${course['jumlah_lesson'] ?? 0} lesson',
           style: const TextStyle(fontSize: 12, color: Colors.grey),
         ),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Colors.grey,
+        ),
         onTap: () {
-          // Navigasi ke tab Course (My Course)
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const Navbar(initialIndex: 1, initialSelectMyCourse: true),
+              builder: (_) =>
+                  const Navbar(initialIndex: 1, initialSelectMyCourse: true),
             ),
           );
         },

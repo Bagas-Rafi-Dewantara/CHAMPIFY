@@ -21,6 +21,7 @@ dependencies:
   intl: ^0.20.2 # <--- Tambahkan baris ini
   youtube_player_flutter: ^9.0.1 # <--- Tambahkan ini
   google_nav_bar: ^5.0.7
+  image_picker: ^1.1.1
 
 dev_dependencies:
   flutter_test:

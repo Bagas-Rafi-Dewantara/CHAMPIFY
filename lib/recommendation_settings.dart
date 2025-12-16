@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'main.dart';
 
 class RecommendationSettingsPage extends StatefulWidget {
   const RecommendationSettingsPage({Key? key}) : super(key: key);
@@ -10,6 +13,9 @@ class RecommendationSettingsPage extends StatefulWidget {
 
 class _RecommendationSettingsPageState
     extends State<RecommendationSettingsPage> {
+  bool _loading = true;
+  bool _saving = false;
+
   // State untuk toggle switches
   bool showCourseRecommendations = true;
   bool showCompetitionRecommendations = true;
@@ -35,6 +41,12 @@ class _RecommendationSettingsPageState
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F5F5),
@@ -56,11 +68,18 @@ class _RecommendationSettingsPageState
         centerTitle: true,
       ),
       body: SingleChildScrollView(
+        physics: _loading ? const NeverScrollableScrollPhysics() : null,
         child: Padding(
           padding: const EdgeInsets.all(20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (_loading)
+                const LinearProgressIndicator(
+                  color: Color(0xFFE89B8E),
+                  minHeight: 2,
+                ),
+              if (_loading) const SizedBox(height: 16),
               // Header Description
               Container(
                 padding: const EdgeInsets.all(16),
@@ -307,6 +326,7 @@ class _RecommendationSettingsPageState
               // Reset Button
               GestureDetector(
                 onTap: () {
+                  if (_saving) return;
                   _showResetDialog();
                 },
                 child: Container(
@@ -338,6 +358,7 @@ class _RecommendationSettingsPageState
               // Save Button
               GestureDetector(
                 onTap: () {
+                  if (_saving) return;
                   _saveSettings();
                 },
                 child: Container(
@@ -347,15 +368,26 @@ class _RecommendationSettingsPageState
                     color: const Color(0xFFE89B8E),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Center(
-                    child: Text(
-                      'Simpan Pengaturan',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
+                  child: Center(
+                    child: _saving
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.white,
+                              ),
+                            ),
+                          )
+                        : const Text(
+                            'Simpan Pengaturan',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
                   ),
                 ),
               ),
@@ -366,6 +398,36 @@ class _RecommendationSettingsPageState
         ),
       ),
     );
+  }
+
+  Future<void> _loadSettings() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      setState(() => _loading = false);
+      return;
+    }
+
+    final meta = user.userMetadata ?? {};
+    final existing = meta['recommendation_settings'];
+
+    if (existing is Map) {
+      setState(() {
+        showCourseRecommendations = existing['show_course'] as bool? ?? true;
+        showCompetitionRecommendations =
+            existing['show_competition'] as bool? ?? true;
+        showMentoringRecommendations =
+            existing['show_mentoring'] as bool? ?? true;
+        personalizedRecommendations = existing['personalized'] as bool? ?? true;
+        trendingContent = existing['trending'] as bool? ?? true;
+        newContent = existing['new_content'] as bool? ?? true;
+        final categories = existing['categories'];
+        if (categories is List) {
+          selectedCategories = categories.whereType<String>().toSet();
+        }
+      });
+    }
+
+    setState(() => _loading = false);
   }
 
   Widget _buildToggleItem({
@@ -477,29 +539,71 @@ class _RecommendationSettingsPageState
     );
   }
 
-  void _saveSettings() {
-    // Di sini Anda bisa menambahkan logika untuk menyimpan pengaturan
-    // Misalnya ke SharedPreferences atau database
+  Future<void> _saveSettings() async {
+    final user = supabase.auth.currentUser;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: const [
-            Icon(Icons.check_circle, color: Colors.white),
-            SizedBox(width: 10),
-            Text('Pengaturan berhasil disimpan!'),
-          ],
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Silakan login untuk menyimpan pengaturan'),
+          backgroundColor: Color(0xFFE89B8E),
         ),
-        backgroundColor: const Color(0xFFE89B8E),
-        duration: const Duration(seconds: 2),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      ),
-    );
+      );
+      return;
+    }
 
-    // Optional: Kembali ke halaman settings setelah 1 detik
-    Future.delayed(const Duration(seconds: 1), () {
-      Navigator.pop(context);
-    });
+    setState(() => _saving = true);
+
+    final payload = {
+      'show_course': showCourseRecommendations,
+      'show_competition': showCompetitionRecommendations,
+      'show_mentoring': showMentoringRecommendations,
+      'personalized': personalizedRecommendations,
+      'trending': trendingContent,
+      'new_content': newContent,
+      'categories': selectedCategories.toList(),
+    };
+
+    final updatedMeta = {
+      ...(user.userMetadata ?? {}),
+      'recommendation_settings': payload,
+    };
+
+    try {
+      await supabase.auth.updateUser(UserAttributes(data: updatedMeta));
+      await supabase.auth.refreshSession();
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle, color: Colors.white),
+              SizedBox(width: 10),
+              Text('Pengaturan berhasil disimpan!'),
+            ],
+          ),
+          backgroundColor: const Color(0xFFE89B8E),
+          duration: const Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+        ),
+      );
+
+      Navigator.pop(context, payload);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal menyimpan: $e'),
+          backgroundColor: Colors.red.shade400,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 }
