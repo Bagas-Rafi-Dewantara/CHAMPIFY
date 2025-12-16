@@ -10,7 +10,11 @@ import 'settings.dart';
 class Navbar extends StatefulWidget {
   final int initialIndex;
   final bool initialSelectMyCourse;
-  const Navbar({super.key, this.initialIndex = 0, this.initialSelectMyCourse = false});
+  const Navbar({
+    super.key,
+    this.initialIndex = 0,
+    this.initialSelectMyCourse = false,
+  });
 
   @override
   State<Navbar> createState() => _NavbarState();
@@ -70,63 +74,74 @@ class _NavbarState extends State<Navbar> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      extendBody: true,
-      body: [
-        const HomePage(),
-        CoursePage(initialSelectMyCourse: _courseOpenMyCourse),
-        const CompetitionListScreen(),
-        const SettingsPage(),
-      ][_selectedIndex],
+      body: Stack(
+        children: [
+          // Content Pages
+          [
+            const HomePage(),
+            CoursePage(initialSelectMyCourse: _courseOpenMyCourse),
+            const CompetitionListScreen(),
+            const SettingsPage(),
+          ][_selectedIndex],
 
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30), // Lebih membulat
-          boxShadow: [
-            BoxShadow(
-              blurRadius: 20,
-              color: Colors.black.withOpacity(0.1),
-              offset: const Offset(0, 10),
-            ),
-          ],
-        ),
-        // Margin luarnya dikecilin biar bar-nya lebih lebar & muat banyak
-        margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
-
-        child: Padding(
-          // Padding container diperkecil
-          padding: const EdgeInsets.all(5),
-          child: GNav(
-            rippleColor: Colors.grey[300]!,
-            hoverColor: Colors.grey[100]!,
-            gap: 4, // Jarak icon ke text didempetin dikit
-            activeColor: Colors.white,
-            iconSize: 27,
-
-            // INI KUNCINYA: Padding dalam tombol dikurangi drastis (tadi 20, skrg 10)
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-
-            duration: const Duration(milliseconds: 400),
-            tabBackgroundColor: _themeColor,
-            color: Colors.grey[500],
-
-            tabs: const [
-              GButton(icon: Icons.home_rounded, text: 'Home'),
-              GButton(icon: Icons.play_circle_fill_rounded, text: 'Course'),
-              GButton(
-                icon: Icons.emoji_events_rounded,
-                text: 'Competition', // Teks dipendekin dikit
+          // Floating Navbar di bottom
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(30),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    blurRadius: 20,
+                    color: Colors.black.withOpacity(0.1),
+                    offset: const Offset(0, -5),
+                  ),
+                ],
               ),
-              GButton(icon: Icons.settings_rounded, text: 'Setting'),
-            ],
-            selectedIndex: _selectedIndex,
-            onTabChange: (index) {
-              setState(() {
-                _selectedIndex = index;
-              });
-            },
+              margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
+              child: Padding(
+                padding: const EdgeInsets.all(5),
+                child: GNav(
+                  rippleColor: Colors.grey[300]!,
+                  hoverColor: Colors.grey[100]!,
+                  gap: 4,
+                  activeColor: Colors.white,
+                  iconSize: 27,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 12,
+                  ),
+                  duration: const Duration(milliseconds: 400),
+                  tabBackgroundColor: _themeColor,
+                  color: Colors.grey[500],
+                  tabs: const [
+                    GButton(icon: Icons.home_rounded, text: 'Home'),
+                    GButton(
+                      icon: Icons.play_circle_fill_rounded,
+                      text: 'Course',
+                    ),
+                    GButton(
+                      icon: Icons.emoji_events_rounded,
+                      text: 'Competition',
+                    ),
+                    GButton(icon: Icons.settings_rounded, text: 'Setting'),
+                  ],
+                  selectedIndex: _selectedIndex,
+                  onTabChange: (index) {
+                    setState(() {
+                      _selectedIndex = index;
+                    });
+                  },
+                ),
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }

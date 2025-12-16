@@ -18,11 +18,19 @@ class _SettingsPageState extends State<SettingsPage> {
   String _displayName = 'Pengguna';
   String _email = '';
   String? _avatarUrl;
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _loadProfile() {
@@ -40,35 +48,130 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewPadding.bottom;
+    const baseBottomGap =
+        100.0; // large gap to keep content above floating navbar
+    final scrollBottomPadding = baseBottomGap + bottomInset;
+    final contentItems = [
+      _SettingItem(
+        title: 'Rekomendasi',
+        icon: Icons.wb_incandescent_outlined,
+        section: 'Kelola Konten',
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const RecommendationSettingsPage(),
+            ),
+          ).then((_) async {
+            await supabase.auth.refreshSession();
+            _loadProfile();
+          });
+        },
+      ),
+      _SettingItem(
+        title: 'Notifikasi',
+        icon: Icons.notifications_outlined,
+        section: 'Kelola Konten',
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const NotificationSettingsPage(),
+            ),
+          ).then((_) async {
+            await supabase.auth.refreshSession();
+            _loadProfile();
+          });
+        },
+      ),
+      _SettingItem(
+        title: 'Syarat & Ketentuan',
+        icon: Icons.description_outlined,
+        section: 'Kelola Konten',
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const TermsConditionsPage(),
+            ),
+          );
+        },
+      ),
+      _SettingItem(
+        title: 'Kebijakan Privasi',
+        icon: Icons.shield_outlined,
+        section: 'Kelola Konten',
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const PrivacyPolicyPage()),
+          );
+        },
+      ),
+    ];
+
+    final optionItems = [
+      _SettingItem(
+        title: 'Bahasa',
+        icon: Icons.language,
+        section: 'Pilihan',
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Text(
+              'Indonesia',
+              style: TextStyle(fontSize: 14, color: Colors.black),
+            ),
+            SizedBox(width: 8),
+            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+          ],
+        ),
+        onTap: _showLanguageSheet,
+      ),
+    ];
+
+    final allItems = [...contentItems, ...optionItems];
+    final filteredItems = _searchQuery.trim().isEmpty
+        ? <_SettingItem>[]
+        : allItems
+              .where(
+                (item) => item.title.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ),
+              )
+              .toList();
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(bottom: 20),
-          child: Padding(
+      backgroundColor: Colors.white,
+      body: SingleChildScrollView(
+        padding: EdgeInsets.only(bottom: scrollBottomPadding),
+            child: Padding(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Search Bar
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEEEEF3),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: const [
-                      Icon(Icons.search, color: Colors.grey, size: 20),
-                      SizedBox(width: 10),
-                      Text(
-                        'Cari...',
-                        style: TextStyle(color: Colors.grey, fontSize: 14),
-                      ),
-                    ],
+                TextField(
+                  controller: _searchController,
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: 'Cari...',
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    filled: true,
+                    fillColor: const Color(0xFFEEEEF3),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                 ),
 
@@ -146,147 +249,119 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 const SizedBox(height: 30),
 
-                // Kelola Konten Section
-                const Text(
-                  'Kelola Konten',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                if (_searchQuery.isEmpty) ...[
+                  // Kelola Konten Section
+                  const Text(
+                    'Kelola Konten',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 15),
+                  const SizedBox(height: 15),
 
-                // ALL MENU ITEMS IN ONE WHITE CONTAINER
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: List.generate(contentItems.length, (index) {
+                        final item = contentItems[index];
+                        return _buildMenuItemInContainer(
+                          icon: item.icon,
+                          title: item.title,
+                          isFirst: index == 0,
+                          isLast: index == contentItems.length - 1,
+                          onTap: item.onTap,
+                        );
+                      }),
+                    ),
                   ),
-                  child: Column(
-                    children: [
-                      _buildMenuItemInContainer(
-                        icon: Icons.wb_incandescent_outlined,
-                        title: 'Rekomendasi',
-                        isFirst: true,
-                        isLast: false,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const RecommendationSettingsPage(),
-                            ),
-                          ).then((_) async {
-                            await supabase.auth.refreshSession();
-                            _loadProfile();
-                          });
-                        },
+
+                  const SizedBox(height: 30),
+
+                  // Pilihan Section
+                  const Text(
+                    'Pilihan',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: List.generate(optionItems.length, (index) {
+                        final item = optionItems[index];
+                        return _buildMenuItemInContainer(
+                          icon: item.icon,
+                          title: item.title,
+                          isFirst: index == 0,
+                          isLast: index == optionItems.length - 1,
+                          trailing: item.trailing,
+                          onTap: item.onTap,
+                        );
+                      }),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                ] else ...[
+                  const Text(
+                    'Hasil Pencarian',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  if (filteredItems.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      _buildMenuItemInContainer(
-                        icon: Icons.notifications_outlined,
-                        title: 'Notifikasi',
-                        isFirst: false,
-                        isLast: false,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const NotificationSettingsPage(),
-                            ),
-                          ).then((_) async {
-                            await supabase.auth.refreshSession();
-                            _loadProfile();
-                          });
-                        },
+                      child: const Text(
+                        'Tidak ada hasil yang cocok.',
+                        style: TextStyle(color: Colors.grey),
                       ),
-                      _buildMenuItemInContainer(
-                        icon: Icons.description_outlined,
-                        title: 'Syarat & Ketentuan',
-                        isFirst: false,
-                        isLast: false,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const TermsConditionsPage(),
-                            ),
+                    )
+                  else
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Column(
+                        children: List.generate(filteredItems.length, (index) {
+                          final item = filteredItems[index];
+                          return _buildMenuItemInContainer(
+                            icon: item.icon,
+                            title: item.title,
+                            isFirst: index == 0,
+                            isLast: index == filteredItems.length - 1,
+                            trailing: item.trailing,
+                            onTap: item.onTap,
                           );
-                        },
+                        }),
                       ),
-                      _buildMenuItemInContainer(
-                        icon: Icons.shield_outlined,
-                        title: 'Kebijakan Privasi',
-                        isFirst: false,
-                        isLast: true,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const PrivacyPolicyPage(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
+                    ),
 
-                const SizedBox(height: 30),
-
-                // Pilihan Section
-                const Text(
-                  'Pilihan',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-
-                const SizedBox(height: 15),
-
-                // PILIHAN MENU IN ONE WHITE CONTAINER
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    children: [
-                      // Language Menu
-                      _buildMenuItemInContainer(
-                        icon: Icons.language,
-                        title: 'Bahasa',
-                        isFirst: true,
-                        isLast: true,
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Text(
-                              'Indonesia',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.black,
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                              color: Colors.grey,
-                            ),
-                          ],
-                        ),
-                        onTap: _showLanguageSheet,
-                      ),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 20),
+                  const SizedBox(height: 20),
+                ],
 
                 // Log Out Button
                 GestureDetector(
@@ -419,4 +494,20 @@ class _SettingsPageState extends State<SettingsPage> {
       ),
     );
   }
+}
+
+class _SettingItem {
+  final String title;
+  final IconData icon;
+  final String section;
+  final Widget? trailing;
+  final VoidCallback onTap;
+
+  _SettingItem({
+    required this.title,
+    required this.icon,
+    required this.section,
+    required this.onTap,
+    this.trailing,
+  });
 }
