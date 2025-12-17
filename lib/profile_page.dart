@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 import 'authentication/login.dart' show LoginPage;
 import 'main.dart';
 import 'navbar.dart';
 import 'profile_edit_page.dart';
+import 'theme_provider.dart';
 
 const Color kProfileThemeColor = Color(0xFFE89B8E);
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -122,19 +124,24 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(
+            Icons.arrow_back, 
+            color: isDark ? Colors.white : Colors.black,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Profil',
           style: TextStyle(
-            color: Colors.black,
+            color: isDark ? Colors.white : Colors.black,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -142,16 +149,19 @@ class _ProfilePageState extends State<ProfilePage> {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.black),
+            icon: Icon(
+              Icons.refresh, 
+              color: isDark ? Colors.white : Colors.black,
+            ),
             onPressed: _loadData,
           ),
         ],
       ),
-      body: _buildBody(),
+      body: _buildBody(isDark),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(bool isDark) {
     if (_loading) {
       return const Center(
         child: CircularProgressIndicator(color: kProfileThemeColor),
@@ -167,7 +177,10 @@ class _ProfilePageState extends State<ProfilePage> {
             Text(
               _error!,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 15, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 15, 
+                color: isDark ? Colors.white70 : Colors.black87,
+              ),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -201,7 +214,7 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(),
+            _buildHeader(isDark),
             const SizedBox(height: 18),
             Row(
               children: [
@@ -210,6 +223,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     label: 'Kelas Diikuti',
                     value: _courseCount.toString(),
                     icon: Icons.play_circle_fill_rounded,
+                    isDark: isDark,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -218,6 +232,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     label: 'Quiz Dikerjakan',
                     value: _quizCount.toString(),
                     icon: Icons.quiz_outlined,
+                    isDark: isDark,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -226,17 +241,18 @@ class _ProfilePageState extends State<ProfilePage> {
                     label: 'Rata-rata Skor',
                     value: _quizCount == 0 ? '-' : _avgScore.toStringAsFixed(0),
                     icon: Icons.star_border_rounded,
+                    isDark: isDark,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 22),
-            const Text(
+            Text(
               'Kelas yang diikuti',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Colors.black,
+                color: isDark ? Colors.white : Colors.black,
               ),
             ),
             const SizedBox(height: 10),
@@ -244,12 +260,13 @@ class _ProfilePageState extends State<ProfilePage> {
               _emptyState(
                 icon: Icons.library_books_outlined,
                 message: 'Belum ada kelas. Yuk mulai belajar!',
+                isDark: isDark,
               )
             else
               Column(
                 children: _enrolledCourses
                     .take(3)
-                    .map((c) => _CourseTile(course: c))
+                    .map((c) => _CourseTile(course: c, isDark: isDark))
                     .toList(),
               ),
             if (_enrolledCourses.length > 3)
@@ -257,193 +274,98 @@ class _ProfilePageState extends State<ProfilePage> {
                 padding: const EdgeInsets.only(top: 8),
                 child: Text(
                   '+${_enrolledCourses.length - 3} kelas lainnya',
-                  style: const TextStyle(fontSize: 13, color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 13, 
+                    color: isDark ? Colors.grey[400] : Colors.grey,
+                  ),
                 ),
               ),
             const SizedBox(height: 22),
-            const Text(
+            Text(
               'Quiz & Progress',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Colors.black,
+                color: isDark ? Colors.white : Colors.black,
               ),
             ),
             const SizedBox(height: 10),
-            _buildQuizCard(),
-            const SizedBox(height: 24),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _goToCourses,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: kProfileThemeColor),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Lihat Semua Course',
-                      style: TextStyle(
-                        color: kProfileThemeColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _loadData,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: kProfileThemeColor,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Refresh Data',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            if (supabase.auth.currentUser != null)
-              SizedBox(
-                width: double.infinity,
-                child: TextButton(
-                  onPressed: () async {
-                    await supabase.auth.signOut();
-                    if (mounted) {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginPage()),
-                        (_) => false,
-                      );
-                    }
-                  },
-                  child: const Text(
-                    'Keluar dari akun',
-                    style: TextStyle(
-                      color: Colors.red,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
+            _buildQuizCard(isDark),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(bool isDark) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
+        borderRadius: BorderRadius.circular(14),
         onTap: _openEditProfilePage,
-        borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 12,
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.04),
+                blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
             ],
           ),
           child: Row(
             children: [
-              _avatarUrl != null
-                  ? CircleAvatar(
-                      radius: 36,
-                      backgroundImage: NetworkImage(_avatarUrl!),
-                    )
-                  : CircleAvatar(
-                      radius: 36,
-                      backgroundColor: Colors.grey.shade300,
-                      child: const Icon(
+              CircleAvatar(
+                radius: 32,
+                backgroundColor: kProfileThemeColor.withOpacity(0.1),
+                backgroundImage:
+                    _avatarUrl != null ? NetworkImage(_avatarUrl!) : null,
+                child: _avatarUrl == null
+                    ? const Icon(
                         Icons.person,
-                        color: Colors.white,
-                        size: 30,
-                      ),
-                    ),
-              const SizedBox(width: 16),
+                        color: kProfileThemeColor,
+                        size: 28,
+                      )
+                    : null,
+              ),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       _displayName,
-                      style: const TextStyle(
-                        fontSize: 18,
+                      style: TextStyle(
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _email,
-                      style: const TextStyle(fontSize: 14, color: Colors.grey),
-                    ),
-                    if (_headline.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                    const SizedBox(height: 2),
+                    if (_headline.isNotEmpty)
                       Text(
                         _headline,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black87,
+                        style: TextStyle(
+                          fontSize: 13, 
+                          color: isDark ? Colors.grey[400] : Colors.grey,
                         ),
-                      ),
-                    ],
-                    if (_major.isNotEmpty) ...[
-                      const SizedBox(height: 4),
+                      )
+                    else
                       Text(
-                        _major,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.black87,
+                        _email,
+                        style: TextStyle(
+                          fontSize: 13, 
+                          color: isDark ? Colors.grey[400] : Colors.grey,
                         ),
                       ),
-                    ],
-                    if (_university.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        _university,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                    if (_city.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '📍 $_city',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
+                        horizontal: 8,
+                        vertical: 4,
                       ),
                       decoration: BoxDecoration(
                         color: kProfileThemeColor.withOpacity(0.12),
@@ -469,7 +391,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildQuizCard() {
+  Widget _buildQuizCard(bool isDark) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -478,11 +400,11 @@ class _ProfilePageState extends State<ProfilePage> {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withOpacity(isDark ? 0.3 : 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -506,12 +428,12 @@ class _ProfilePageState extends State<ProfilePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Progress Quiz',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -519,12 +441,19 @@ class _ProfilePageState extends State<ProfilePage> {
                       _quizCount == 0
                           ? 'Belum ada quiz yang diselesaikan'
                           : '$_quizCount quiz dikerjakan • Rata-rata skor ${_avgScore.toStringAsFixed(0)}',
-                      style: const TextStyle(fontSize: 13, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 13, 
+                        color: isDark ? Colors.grey[400] : Colors.grey,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+              Icon(
+                Icons.arrow_forward_ios, 
+                size: 16, 
+                color: isDark ? Colors.grey[400] : Colors.grey,
+              ),
             ],
           ),
         ),
@@ -532,23 +461,36 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _emptyState({required IconData icon, required String message}) {
+  Widget _emptyState({
+    required IconData icon, 
+    required String message,
+    required bool isDark,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+        ),
       ),
       child: Column(
         children: [
-          Icon(icon, color: Colors.grey.shade400, size: 26),
+          Icon(
+            icon, 
+            color: isDark ? Colors.grey.shade600 : Colors.grey.shade400, 
+            size: 26,
+          ),
           const SizedBox(height: 8),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 13, color: Colors.grey),
+            style: TextStyle(
+              fontSize: 13, 
+              color: isDark ? Colors.grey[400] : Colors.grey,
+            ),
           ),
         ],
       ),
@@ -591,11 +533,13 @@ class _StatCard extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
+  final bool isDark;
 
   const _StatCard({
     required this.label,
     required this.value,
     required this.icon,
+    required this.isDark,
   });
 
   @override
@@ -603,11 +547,11 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(14),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(isDark ? 0.3 : 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -627,16 +571,19 @@ class _StatCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w700,
-              color: Colors.black,
+              color: isDark ? Colors.white : Colors.black,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             label,
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+            style: TextStyle(
+              fontSize: 13, 
+              color: isDark ? Colors.grey[400] : Colors.grey.shade600,
+            ),
           ),
         ],
       ),
@@ -646,8 +593,12 @@ class _StatCard extends StatelessWidget {
 
 class _CourseTile extends StatelessWidget {
   final Map<String, dynamic> course;
+  final bool isDark;
 
-  const _CourseTile({required this.course});
+  const _CourseTile({
+    required this.course,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -655,14 +606,18 @@ class _CourseTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: const [
+        border: Border.all(
+          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+        ),
+        boxShadow: [
           BoxShadow(
-            color: Color(0xFFFFE4DD),
+            color: isDark 
+                ? Colors.black.withOpacity(0.3)
+                : const Color(0xFFFFE4DD),
             blurRadius: 5,
-            offset: Offset(0, 3),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -672,13 +627,16 @@ class _CourseTile extends StatelessWidget {
           child: Container(
             width: 52,
             height: 52,
-            color: Colors.grey.shade200,
+            color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
             child: course['link_gambar'] != null
                 ? Image.network(
                     course['link_gambar'],
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) =>
-                        const Icon(Icons.broken_image, color: Colors.grey),
+                        Icon(
+                          Icons.broken_image, 
+                          color: isDark ? Colors.grey[600] : Colors.grey,
+                        ),
                   )
                 : const Icon(Icons.play_circle_fill, color: kProfileThemeColor),
           ),
@@ -687,20 +645,23 @@ class _CourseTile extends StatelessWidget {
           course['nama_course'] ?? 'Tanpa Judul',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w700,
-            color: Colors.black,
+            color: isDark ? Colors.white : Colors.black,
           ),
         ),
         subtitle: Text(
           'Mentor: $mentorName • ${course['jumlah_lesson'] ?? 0} lesson',
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
+          style: TextStyle(
+            fontSize: 12, 
+            color: isDark ? Colors.grey[400] : Colors.grey,
+          ),
         ),
-        trailing: const Icon(
+        trailing: Icon(
           Icons.arrow_forward_ios,
           size: 16,
-          color: Colors.grey,
+          color: isDark ? Colors.grey[400] : Colors.grey,
         ),
         onTap: () {
           Navigator.push(

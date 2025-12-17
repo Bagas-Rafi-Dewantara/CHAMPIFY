@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // <--- JANGAN LUPA INI
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
-import 'mycourse_quiz.dart'; // Import halaman quiz
-import 'mycourse_score.dart'; // Import halaman score
+import 'package:provider/provider.dart';
+import '../theme_provider.dart';
+import 'mycourse_quiz.dart';
+import 'mycourse_score.dart';
 
 class MyCoursePlaylistPage extends StatefulWidget {
   final Map<String, dynamic> courseData;
@@ -15,7 +16,7 @@ class MyCoursePlaylistPage extends StatefulWidget {
 }
 
 class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
-  int selectedTabIndex = 0; // 0=Playlist, 1=Quiz, 2=Zoom
+  int selectedTabIndex = 0;
   YoutubePlayerController? _controller;
   String currentPlayingTitle = "";
 
@@ -26,7 +27,6 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
     super.initState();
   }
 
-  // LOGIC TAB & VIDEO (Sama seperti sebelumnya)
   void _onTabChanged(int index) {
     setState(() {
       selectedTabIndex = index;
@@ -88,7 +88,8 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
 
   @override
   Widget build(BuildContext context) {
-    // --- VIDEO PLAYER BUILDER ---
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    
     Widget playerWidget = Container();
     if (_controller != null) {
       playerWidget = YoutubePlayer(
@@ -148,8 +149,9 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
       );
     }
 
-    if (_controller == null)
-      return _buildScaffold(isPlayerVisible: false, playerWidget: null);
+    if (_controller == null) {
+      return _buildScaffold(isPlayerVisible: false, playerWidget: null, isDark: isDark);
+    }
 
     return YoutubePlayerBuilder(
       player: playerWidget as YoutubePlayer,
@@ -157,18 +159,23 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
         return _buildScaffold(
           isPlayerVisible: isPlayerVisible,
           playerWidget: player,
+          isDark: isDark,
         );
       },
     );
   }
 
-  Widget _buildScaffold({required bool isPlayerVisible, Widget? playerWidget}) {
+  Widget _buildScaffold({
+    required bool isPlayerVisible, 
+    Widget? playerWidget,
+    required bool isDark,
+  }) {
     final String courseTitle =
         widget.courseData['nama_course'] ?? 'Course Detail';
     final String imageUrl = widget.courseData['link_gambar'] ?? '';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
       body: Column(
         children: [
           // Header Video/Image
@@ -240,14 +247,14 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
           Expanded(
             child: Container(
               width: double.infinity,
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black12,
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.12),
                     blurRadius: 10,
-                    offset: Offset(0, -5),
+                    offset: const Offset(0, -5),
                   ),
                 ],
               ),
@@ -261,35 +268,42 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
                         isPlayerVisible
                             ? "Now Playing: $currentPlayingTitle"
                             : courseTitle,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           height: 1.3,
+                          color: isDark ? Colors.white : Colors.black,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ),
+                  
+                  // ✅ FIX: Tab dengan animasi instant & styling lebih jelas
                   Container(
                     margin: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 10,
                     ),
-                    padding: const EdgeInsets.all(5),
+                    padding: const EdgeInsets.all(4),
                     decoration: BoxDecoration(
-                      color: Colors.grey[100],
+                      color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFF5F5F5),
                       borderRadius: BorderRadius.circular(50),
+                      border: Border.all(
+                        color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+                        width: 1,
+                      ),
                     ),
                     child: Row(
                       children: [
-                        _buildTabItem("Playlist", 0),
-                        _buildTabItem("Quiz", 1),
-                        _buildTabItem("Zoom", 2),
+                        _buildTabItem("Playlist", 0, isDark),
+                        _buildTabItem("Quiz", 1, isDark),
+                        _buildTabItem("Zoom", 2, isDark),
                       ],
                     ),
                   ),
-                  Expanded(child: _buildContentList()),
+                  Expanded(child: _buildContentList(isDark)),
                 ],
               ),
             ),
@@ -299,16 +313,23 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
     );
   }
 
-  Widget _buildContentList() {
-    // 1. PLAYLIST
+  Widget _buildContentList(bool isDark) {
     if (selectedTabIndex == 0) {
       final List<dynamic> playlist = widget.courseData['playlist'] ?? [];
       playlist.sort(
         (a, b) =>
             (a['nomor_playlist'] ?? 0).compareTo(b['nomor_playlist'] ?? 0),
       );
-      if (playlist.isEmpty)
-        return const Center(child: Text("Belum ada video."));
+      if (playlist.isEmpty) {
+        return Center(
+          child: Text(
+            "Belum ada video.",
+            style: TextStyle(
+              color: isDark ? Colors.grey[400] : Colors.grey,
+            ),
+          ),
+        );
+      }
 
       return ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -328,13 +349,27 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
-                color: isPlaying ? const Color(0xFFFFE0E0) : Colors.white,
+                color: isPlaying 
+                    ? const Color(0xFFFFE0E0) 
+                    : (isDark ? const Color(0xFF2D2D2D) : Colors.white),
                 borderRadius: BorderRadius.circular(18),
+                // ✅ FIX: Border lebih tebal & kontras
                 border: Border.all(
                   color: isPlaying
                       ? const Color(0xFFFF9494)
-                      : Colors.grey.shade200,
+                      : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
+                  width: isPlaying ? 2 : 1.5, // ✅ Border lebih tebal
                 ),
+                // ✅ FIX: Shadow lebih terlihat di light mode
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark 
+                        ? Colors.black.withOpacity(0.3)
+                        : Colors.grey.shade300,
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Row(
                 children: [
@@ -352,13 +387,16 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
                       children: [
                         Text(
                           title,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : Colors.black,
+                          ),
                           maxLines: 2,
                         ),
                         Text(
                           duration,
-                          style: const TextStyle(
-                            color: Colors.grey,
+                          style: TextStyle(
+                            color: isDark ? Colors.grey[400] : Colors.grey,
                             fontSize: 12,
                           ),
                         ),
@@ -371,18 +409,24 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
           );
         },
       );
-    }
-    // 2. QUIZ
-    else if (selectedTabIndex == 1) {
+    } else if (selectedTabIndex == 1) {
       final List<dynamic> quizzes = widget.courseData['quiz'] ?? [];
-      if (quizzes.isEmpty) return const Center(child: Text("Belum ada kuis."));
+      if (quizzes.isEmpty) {
+        return Center(
+          child: Text(
+            "Belum ada kuis.",
+            style: TextStyle(
+              color: isDark ? Colors.grey[400] : Colors.grey,
+            ),
+          ),
+        );
+      }
 
       return ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         itemCount: quizzes.length,
         itemBuilder: (context, index) {
           final quizData = quizzes[index];
-          // AMBIL DATA SOAL DARI 'soal_kuis' (Nested Data dari Supabase)
           final List<dynamic> soalList = quizData['soal_kuis'] ?? [];
 
           return GestureDetector(
@@ -394,7 +438,6 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
                 return;
               }
 
-              // --- LOGIC GATE: CEK HISTORY DULU ---
               final userId = Supabase.instance.client.auth.currentUser?.id;
               final quizId = quizData['id_quiz'];
 
@@ -405,7 +448,6 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
                 return;
               }
 
-              // Tampilkan loading dialog
               showDialog(
                 context: context,
                 barrierDismissible: false,
@@ -414,7 +456,6 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
               );
 
               try {
-                // 1. Cek DB: Apakah user sudah pernah mengerjakan quiz ini?
                 final checkData = await Supabase.instance.client
                     .from('quiz_score')
                     .select()
@@ -422,10 +463,9 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
                     .eq('id_quiz', quizId)
                     .maybeSingle();
 
-                Navigator.pop(context); // Tutup loading
+                Navigator.pop(context);
 
                 if (checkData != null) {
-                  // --- KASUS: SUDAH ADA DATA -> KE SCORE PAGE ---
                   Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -438,19 +478,18 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
                     ),
                   );
                 } else {
-                  // --- KASUS: BELUM ADA -> KERJAIN QUIZ ---
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => MyCourseQuizPage(
                         rawQuestions: soalList,
-                        quizId: quizId, // PASSING ID QUIZ PENTING
+                        quizId: quizId,
                       ),
                     ),
                   );
                 }
               } catch (e) {
-                Navigator.pop(context); // Tutup loading jika error
+                Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text("Gagal memuat data: $e")),
                 );
@@ -460,13 +499,18 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
               margin: const EdgeInsets.only(bottom: 15),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF2D2D2D) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: const Color(0xFFFFA08A)),
+                border: Border.all(
+                  color: const Color(0xFFFFA08A),
+                  width: 1.5, // ✅ Border lebih tebal
+                ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFFFA08A).withOpacity(0.1),
-                    blurRadius: 5,
+                    color: isDark 
+                        ? Colors.black.withOpacity(0.3)
+                        : Colors.grey.shade300,
+                    blurRadius: 8,
                     offset: const Offset(0, 3),
                   ),
                 ],
@@ -477,9 +521,9 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
                   const SizedBox(width: 15),
                   Text(
                     "Start Quiz ${index + 1}",
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFFFFA08A),
+                      color: isDark ? Colors.white : const Color(0xFFFFA08A),
                       fontSize: 16,
                     ),
                   ),
@@ -495,12 +539,18 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
           );
         },
       );
-    }
-    // 3. ZOOM
-    else {
+    } else {
       final List<dynamic> zoomList = widget.courseData['zoom'] ?? [];
-      if (zoomList.isEmpty)
-        return const Center(child: Text("Belum ada jadwal zoom."));
+      if (zoomList.isEmpty) {
+        return Center(
+          child: Text(
+            "Belum ada jadwal zoom.",
+            style: TextStyle(
+              color: isDark ? Colors.grey[400] : Colors.grey,
+            ),
+          ),
+        );
+      }
       return ListView.builder(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         itemCount: zoomList.length,
@@ -510,14 +560,19 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
             margin: const EdgeInsets.only(bottom: 15),
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: isDark ? const Color(0xFF2D2D2D) : Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.grey.shade200),
+              border: Border.all(
+                color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
+                width: 1.5, // ✅ Border lebih tebal
+              ),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 5),
+                  color: isDark 
+                      ? Colors.black.withOpacity(0.3)
+                      : Colors.grey.shade300,
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
               ],
             ),
@@ -542,25 +597,26 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
                     children: [
                       Text(
                         zoomItem['nama_zoom'] ?? "Zoom Meeting",
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,
+                          color: isDark ? Colors.white : Colors.black,
                         ),
                       ),
                       const SizedBox(height: 5),
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.calendar_today,
                             size: 12,
-                            color: Colors.grey,
+                            color: isDark ? Colors.grey[400] : Colors.grey,
                           ),
                           const SizedBox(width: 5),
                           Text(
                             zoomItem['date'] ?? "-",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey,
+                              color: isDark ? Colors.grey[400] : Colors.grey,
                             ),
                           ),
                         ],
@@ -593,23 +649,24 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
       );
     }
   }
-
-  Widget _buildTabItem(String title, int index) {
+  Widget _buildTabItem(String title, int index, bool isDark) {
     bool isActive = selectedTabIndex == index;
     return Expanded(
       child: GestureDetector(
         onTap: () => _onTabChanged(index),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 0), 
           padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isActive ? Colors.white : Colors.transparent,
-            borderRadius: BorderRadius.circular(30),
+          decoration: BoxDecoration(            
+            color: isActive 
+                ? const Color(0xFFFF9494)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),          
             boxShadow: isActive
                 ? [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 4,
+                      color: const Color(0xFFFF9494).withOpacity(0.4),
+                      blurRadius: 8,
                       offset: const Offset(0, 2),
                     ),
                   ]
@@ -621,7 +678,9 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
-                color: isActive ? const Color(0xFFFF9494) : Colors.grey[500],
+                color: isActive 
+                    ? Colors.white
+                    : (isDark ? Colors.grey[500] : Colors.grey[600]),
               ),
             ),
           ),

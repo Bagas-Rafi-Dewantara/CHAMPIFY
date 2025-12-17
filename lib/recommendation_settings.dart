@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:provider/provider.dart';
 import 'main.dart';
+import 'theme_provider.dart';
 
 class RecommendationSettingsPage extends StatefulWidget {
-  const RecommendationSettingsPage({Key? key}) : super(key: key);
+  const RecommendationSettingsPage({super.key});
 
   @override
   State<RecommendationSettingsPage> createState() =>
@@ -16,7 +17,6 @@ class _RecommendationSettingsPageState
   bool _loading = true;
   bool _saving = false;
 
-  // State untuk toggle switches
   bool showCourseRecommendations = true;
   bool showCompetitionRecommendations = true;
   bool showMentoringRecommendations = true;
@@ -24,7 +24,6 @@ class _RecommendationSettingsPageState
   bool trendingContent = true;
   bool newContent = true;
 
-  // State untuk kategori yang dipilih
   Set<String> selectedCategories = {'Matematika', 'Fisika', 'Teknologi'};
 
   final List<String> availableCategories = [
@@ -46,21 +45,53 @@ class _RecommendationSettingsPageState
     _loadSettings();
   }
 
+  Future<void> _loadSettings() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      setState(() => _loading = false);
+      return;
+    }
+
+    final meta = user.userMetadata ?? {};
+    final existing = meta['recommendation_settings'];
+
+    if (existing is Map) {
+      setState(() {
+        showCourseRecommendations = existing['show_course'] as bool? ?? true;
+        showCompetitionRecommendations =
+            existing['show_competition'] as bool? ?? true;
+        showMentoringRecommendations =
+            existing['show_mentoring'] as bool? ?? true;
+        personalizedRecommendations = existing['personalized'] as bool? ?? true;
+        trendingContent = existing['trending'] as bool? ?? true;
+        newContent = existing['new_content'] as bool? ?? true;
+        final categories = existing['categories'];
+        if (categories is List) {
+          selectedCategories = categories.whereType<String>().toSet();
+        }
+      });
+    }
+
+    setState(() => _loading = false);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: isDark ? Colors.white : Colors.black),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Rekomendasi',
           style: TextStyle(
-            color: Colors.black,
+            color: isDark ? Colors.white : Colors.black,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -80,28 +111,27 @@ class _RecommendationSettingsPageState
                   minHeight: 2,
                 ),
               if (_loading) const SizedBox(height: 16),
-              // Header Description
+              
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE89B8E).withOpacity(0.1),
+                  color: const Color(0xFFE89B8E).withOpacity(isDark ? 0.2 : 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: const Color(0xFFE89B8E).withOpacity(0.3),
                   ),
                 ),
                 child: Row(
-                  children: const [
-                    Icon(
-                      Icons.info_outline,
-                      color: Color(0xFFE89B8E),
-                      size: 24,
-                    ),
-                    SizedBox(width: 12),
+                  children: [
+                    const Icon(Icons.info_outline, color: Color(0xFFE89B8E), size: 24),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Atur preferensi konten rekomendasi sesuai minat Anda',
-                        style: TextStyle(fontSize: 14, color: Colors.black87),
+                        style: TextStyle(
+                          fontSize: 14, 
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
                       ),
                     ),
                   ],
@@ -110,13 +140,12 @@ class _RecommendationSettingsPageState
 
               const SizedBox(height: 30),
 
-              // Tipe Konten Section
-              const Text(
+              Text(
                 'Tipe Konten',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: isDark ? Colors.white : Colors.black,
                 ),
               ),
 
@@ -124,7 +153,7 @@ class _RecommendationSettingsPageState
 
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -134,35 +163,32 @@ class _RecommendationSettingsPageState
                       title: 'Rekomendasi Kursus',
                       subtitle: 'Tampilkan kursus yang mungkin Anda suka',
                       value: showCourseRecommendations,
+                      isDark: isDark,
                       onChanged: (value) {
-                        setState(() {
-                          showCourseRecommendations = value;
-                        });
+                        setState(() => showCourseRecommendations = value);
                       },
                       isFirst: true,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: isDark ? Colors.grey[800] : null),
                     _buildToggleItem(
                       icon: Icons.emoji_events_outlined,
                       title: 'Rekomendasi Kompetisi',
                       subtitle: 'Tampilkan kompetisi yang sesuai',
                       value: showCompetitionRecommendations,
+                      isDark: isDark,
                       onChanged: (value) {
-                        setState(() {
-                          showCompetitionRecommendations = value;
-                        });
+                        setState(() => showCompetitionRecommendations = value);
                       },
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: isDark ? Colors.grey[800] : null),
                     _buildToggleItem(
                       icon: Icons.people_outline,
                       title: 'Rekomendasi Mentoring',
                       subtitle: 'Tampilkan mentor yang cocok',
                       value: showMentoringRecommendations,
+                      isDark: isDark,
                       onChanged: (value) {
-                        setState(() {
-                          showMentoringRecommendations = value;
-                        });
+                        setState(() => showMentoringRecommendations = value);
                       },
                       isLast: true,
                     ),
@@ -172,13 +198,12 @@ class _RecommendationSettingsPageState
 
               const SizedBox(height: 30),
 
-              // Personalisasi Section
-              const Text(
+              Text(
                 'Personalisasi',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: isDark ? Colors.white : Colors.black,
                 ),
               ),
 
@@ -186,7 +211,7 @@ class _RecommendationSettingsPageState
 
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -196,35 +221,32 @@ class _RecommendationSettingsPageState
                       title: 'Rekomendasi Personal',
                       subtitle: 'Berdasarkan aktivitas dan preferensi Anda',
                       value: personalizedRecommendations,
+                      isDark: isDark,
                       onChanged: (value) {
-                        setState(() {
-                          personalizedRecommendations = value;
-                        });
+                        setState(() => personalizedRecommendations = value);
                       },
                       isFirst: true,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: isDark ? Colors.grey[800] : null),
                     _buildToggleItem(
                       icon: Icons.trending_up,
                       title: 'Konten Trending',
                       subtitle: 'Tampilkan konten yang sedang populer',
                       value: trendingContent,
+                      isDark: isDark,
                       onChanged: (value) {
-                        setState(() {
-                          trendingContent = value;
-                        });
+                        setState(() => trendingContent = value);
                       },
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: isDark ? Colors.grey[800] : null),
                     _buildToggleItem(
                       icon: Icons.new_releases_outlined,
                       title: 'Konten Terbaru',
                       subtitle: 'Tampilkan konten yang baru ditambahkan',
                       value: newContent,
+                      isDark: isDark,
                       onChanged: (value) {
-                        setState(() {
-                          newContent = value;
-                        });
+                        setState(() => newContent = value);
                       },
                       isLast: true,
                     ),
@@ -234,21 +256,23 @@ class _RecommendationSettingsPageState
 
               const SizedBox(height: 30),
 
-              // Kategori Minat Section
-              const Text(
+              Text(
                 'Kategori Minat',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: isDark ? Colors.white : Colors.black,
                 ),
               ),
 
               const SizedBox(height: 8),
 
-              const Text(
+              Text(
                 'Pilih kategori yang Anda minati',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+                style: TextStyle(
+                  fontSize: 14, 
+                  color: isDark ? Colors.grey[400] : Colors.grey,
+                ),
               ),
 
               const SizedBox(height: 15),
@@ -256,7 +280,7 @@ class _RecommendationSettingsPageState
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Wrap(
@@ -282,12 +306,12 @@ class _RecommendationSettingsPageState
                         decoration: BoxDecoration(
                           color: isSelected
                               ? const Color(0xFFE89B8E)
-                              : const Color(0xFFF5F5F5),
+                              : (isDark ? const Color(0xFF2D2D2D) : const Color(0xFFF5F5F5)),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(
                             color: isSelected
                                 ? const Color(0xFFE89B8E)
-                                : Colors.grey.shade300,
+                                : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
                           ),
                         ),
                         child: Row(
@@ -299,7 +323,7 @@ class _RecommendationSettingsPageState
                                 fontSize: 14,
                                 color: isSelected
                                     ? Colors.white
-                                    : Colors.black87,
+                                    : (isDark ? Colors.white : Colors.black87),
                                 fontWeight: isSelected
                                     ? FontWeight.w600
                                     : FontWeight.normal,
@@ -323,17 +347,16 @@ class _RecommendationSettingsPageState
 
               const SizedBox(height: 30),
 
-              // Reset Button
               GestureDetector(
                 onTap: () {
                   if (_saving) return;
-                  _showResetDialog();
+                  _showResetDialog(isDark);
                 },
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: const Color(0xFFE89B8E),
@@ -355,7 +378,6 @@ class _RecommendationSettingsPageState
 
               const SizedBox(height: 20),
 
-              // Save Button
               GestureDetector(
                 onTap: () {
                   if (_saving) return;
@@ -400,41 +422,12 @@ class _RecommendationSettingsPageState
     );
   }
 
-  Future<void> _loadSettings() async {
-    final user = supabase.auth.currentUser;
-    if (user == null) {
-      setState(() => _loading = false);
-      return;
-    }
-
-    final meta = user.userMetadata ?? {};
-    final existing = meta['recommendation_settings'];
-
-    if (existing is Map) {
-      setState(() {
-        showCourseRecommendations = existing['show_course'] as bool? ?? true;
-        showCompetitionRecommendations =
-            existing['show_competition'] as bool? ?? true;
-        showMentoringRecommendations =
-            existing['show_mentoring'] as bool? ?? true;
-        personalizedRecommendations = existing['personalized'] as bool? ?? true;
-        trendingContent = existing['trending'] as bool? ?? true;
-        newContent = existing['new_content'] as bool? ?? true;
-        final categories = existing['categories'];
-        if (categories is List) {
-          selectedCategories = categories.whereType<String>().toSet();
-        }
-      });
-    }
-
-    setState(() => _loading = false);
-  }
-
   Widget _buildToggleItem({
     required IconData icon,
     required String title,
     required String subtitle,
     required bool value,
+    required bool isDark,
     required ValueChanged<bool> onChanged,
     bool isFirst = false,
     bool isLast = false,
@@ -448,7 +441,7 @@ class _RecommendationSettingsPageState
       ),
       child: Row(
         children: [
-          Icon(icon, color: Colors.black87, size: 24),
+          Icon(icon, color: isDark ? Colors.white70 : Colors.black87, size: 24),
           const SizedBox(width: 15),
           Expanded(
             child: Column(
@@ -456,16 +449,19 @@ class _RecommendationSettingsPageState
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Colors.black87,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 13, 
+                    color: isDark ? Colors.grey[400] : Colors.grey.shade600,
+                  ),
                 ),
               ],
             ),
@@ -474,7 +470,7 @@ class _RecommendationSettingsPageState
           Switch(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(0xFFE89B8E),
+            activeThumbColor: const Color(0xFFE89B8E),
             inactiveThumbColor: Colors.grey,
             inactiveTrackColor: Colors.grey.shade300,
           ),
@@ -483,31 +479,43 @@ class _RecommendationSettingsPageState
     );
   }
 
-  void _showResetDialog() {
+  void _showResetDialog(bool isDark) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
-          title: const Text(
+          title: Text(
             'Reset Pengaturan',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            style: TextStyle(
+              fontWeight: FontWeight.bold, 
+              fontSize: 18,
+              color: isDark ? Colors.white : Colors.black,
+            ),
           ),
-          content: const Text(
+          content: Text(
             'Apakah Anda yakin ingin mereset semua pengaturan rekomendasi ke default?',
-            style: TextStyle(fontSize: 14),
+            style: TextStyle(
+              fontSize: 14,
+              color: isDark ? Colors.grey[300] : Colors.black87,
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Batal', style: TextStyle(color: Colors.grey)),
+              child: Text(
+                'Batal', 
+                style: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey,
+                ),
+              ),
             ),
             TextButton(
               onPressed: () {
                 setState(() {
-                  // Reset semua ke default
                   showCourseRecommendations = true;
                   showCompetitionRecommendations = true;
                   showMentoringRecommendations = true;

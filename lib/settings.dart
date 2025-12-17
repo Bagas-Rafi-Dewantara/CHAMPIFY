@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'recommendation_settings.dart';
 import 'notification_settings.dart';
 import 'terms_conditions.dart';
 import 'privacy_policy.dart';
 import 'profile_page.dart';
 import 'main.dart';
+import 'theme_provider.dart';
 import 'authentication/login.dart' show LoginPage;
 
 class SettingsPage extends StatefulWidget {
@@ -36,11 +38,12 @@ class _SettingsPageState extends State<SettingsPage> {
   void _loadProfile() {
     final user = supabase.auth.currentUser;
     if (user == null) return;
+
+    final metaName = user.userMetadata?['full_name'] as String?;
+    debugPrint('⚙️ Settings loading profile - Metadata name: $metaName');
+
     setState(() {
-      _displayName =
-          user.userMetadata?['full_name'] ??
-          user.email?.split('@').first ??
-          'Pengguna';
+      _displayName = metaName ?? user.email?.split('@').first ?? 'Pengguna';
       _email = user.email ?? '';
       _avatarUrl = user.userMetadata?['avatar_url'];
     });
@@ -49,9 +52,12 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewPadding.bottom;
-    const baseBottomGap =
-        100.0; // large gap to keep content above floating navbar
+    const baseBottomGap = 100.0;
     final scrollBottomPadding = baseBottomGap + bottomInset;
+
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+
     final contentItems = [
       _SettingItem(
         title: 'Rekomendasi',
@@ -118,16 +124,35 @@ class _SettingsPageState extends State<SettingsPage> {
         section: 'Pilihan',
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
+          children: [
             Text(
               'Indonesia',
-              style: TextStyle(fontSize: 14, color: Colors.black),
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.grey[400] : Colors.black,
+              ),
             ),
-            SizedBox(width: 8),
-            Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+            const SizedBox(width: 8),
+            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
           ],
         ),
-        onTap: _showLanguageSheet,
+        onTap: _showLanguageComingSoon,
+      ),
+
+      _SettingItem(
+        title: 'Mode Gelap',
+        icon: isDark ? Icons.dark_mode : Icons.light_mode,
+        section: 'Pilihan',
+        trailing: Switch(
+          value: isDark,
+          onChanged: (value) async {
+            await themeProvider.toggleTheme();
+          },
+          activeColor: const Color(0xFFE89B8E),
+        ),
+        onTap: () async {
+          await themeProvider.toggleTheme();
+        },
       ),
     ];
 
@@ -143,7 +168,9 @@ class _SettingsPageState extends State<SettingsPage> {
               .toList();
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark
+          ? const Color(0xFF121212)
+          : const Color(0xFFF5F5F5),
       body: SingleChildScrollView(
         padding: EdgeInsets.only(bottom: scrollBottomPadding),
         child: Padding(
@@ -151,7 +178,6 @@ class _SettingsPageState extends State<SettingsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Search Bar
               TextField(
                 controller: _searchController,
                 onChanged: (value) {
@@ -159,11 +185,15 @@ class _SettingsPageState extends State<SettingsPage> {
                     _searchQuery = value;
                   });
                 },
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
                 decoration: InputDecoration(
                   hintText: 'Cari...',
+                  hintStyle: TextStyle(
+                    color: isDark ? Colors.grey : Colors.grey,
+                  ),
                   prefixIcon: const Icon(Icons.search, color: Colors.grey),
                   filled: true,
-                  fillColor: const Color(0xFFEEEEF3),
+                  fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
@@ -177,26 +207,34 @@ class _SettingsPageState extends State<SettingsPage> {
 
               const SizedBox(height: 30),
 
-              // --- PROFILE SECTION (KLIK UNTUK LOGIN) ---
+              // PROFILE SECTION
               GestureDetector(
                 onTap: () async {
-                  await Navigator.push(
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const ProfilePage(),
                     ),
                   );
+                  // Force refresh auth session dan reload profile
                   await supabase.auth.refreshSession();
-                  _loadProfile();
+                  if (mounted) {
+                    _loadProfile();
+                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
+                    border: isDark
+                        ? null
+                        : Border.all(color: Colors.grey.shade200, width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: isDark
+                            ? Colors.black.withOpacity(0.3)
+                            : Colors.grey.shade200,
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -215,28 +253,33 @@ class _SettingsPageState extends State<SettingsPage> {
                             : null,
                       ),
                       const SizedBox(width: 15),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _displayName,
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _displayName,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _email.isEmpty ? 'Lengkapi email Anda' : _email,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
+                            const SizedBox(height: 4),
+                            Text(
+                              _email.isEmpty ? 'Lengkapi email Anda' : _email,
+                              maxLines: 2,
+                              softWrap: true,
+                              overflow: TextOverflow.visible,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 12),
                       const Icon(
                         Icons.arrow_forward_ios,
                         size: 16,
@@ -251,12 +294,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
               if (_searchQuery.isEmpty) ...[
                 // Kelola Konten Section
-                const Text(
+                Text(
                   'Kelola Konten',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: isDark ? Colors.white : Colors.black,
                   ),
                 ),
 
@@ -264,8 +307,20 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
+                    border: isDark
+                        ? null
+                        : Border.all(color: Colors.grey.shade200, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withOpacity(0.3)
+                            : Colors.grey.shade200,
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: List.generate(contentItems.length, (index) {
@@ -276,6 +331,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         isFirst: index == 0,
                         isLast: index == contentItems.length - 1,
                         onTap: item.onTap,
+                        isDark: isDark,
                       );
                     }),
                   ),
@@ -284,12 +340,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 const SizedBox(height: 30),
 
                 // Pilihan Section
-                const Text(
+                Text(
                   'Pilihan',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: isDark ? Colors.white : Colors.black,
                   ),
                 ),
 
@@ -297,8 +353,20 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
+                    border: isDark
+                        ? null
+                        : Border.all(color: Colors.grey.shade200, width: 1),
+                    boxShadow: [
+                      BoxShadow(
+                        color: isDark
+                            ? Colors.black.withOpacity(0.3)
+                            : Colors.grey.shade200,
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Column(
                     children: List.generate(optionItems.length, (index) {
@@ -310,6 +378,7 @@ class _SettingsPageState extends State<SettingsPage> {
                         isLast: index == optionItems.length - 1,
                         trailing: item.trailing,
                         onTap: item.onTap,
+                        isDark: isDark,
                       );
                     }),
                   ),
@@ -317,12 +386,12 @@ class _SettingsPageState extends State<SettingsPage> {
 
                 const SizedBox(height: 20),
               ] else ...[
-                const Text(
+                Text(
                   'Hasil Pencarian',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: isDark ? Colors.white : Colors.black,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -331,8 +400,20 @@ class _SettingsPageState extends State<SettingsPage> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                       borderRadius: BorderRadius.circular(12),
+                      border: isDark
+                          ? null
+                          : Border.all(color: Colors.grey.shade200, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isDark
+                              ? Colors.black.withOpacity(0.3)
+                              : Colors.grey.shade200,
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: const Text(
                       'Tidak ada hasil yang cocok.',
@@ -342,8 +423,20 @@ class _SettingsPageState extends State<SettingsPage> {
                 else
                   Container(
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                       borderRadius: BorderRadius.circular(12),
+                      border: isDark
+                          ? null
+                          : Border.all(color: Colors.grey.shade200, width: 1),
+                      boxShadow: [
+                        BoxShadow(
+                          color: isDark
+                              ? Colors.black.withOpacity(0.3)
+                              : Colors.grey.shade200,
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: List.generate(filteredItems.length, (index) {
@@ -355,6 +448,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           isLast: index == filteredItems.length - 1,
                           trailing: item.trailing,
                           onTap: item.onTap,
+                          isDark: isDark,
                         );
                       }),
                     ),
@@ -378,9 +472,18 @@ class _SettingsPageState extends State<SettingsPage> {
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 15),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.red, width: 1.5),
+                    boxShadow: isDark
+                        ? null
+                        : [
+                            BoxShadow(
+                              color: Colors.grey.shade200,
+                              blurRadius: 10,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                   ),
                   child: const Center(
                     child: Text(
@@ -403,62 +506,74 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
-  void _showLanguageSheet() {
+  void _showLanguageComingSoon() {
+    final isDark = Provider.of<ThemeProvider>(
+      context,
+      listen: false,
+    ).isDarkMode;
+
     showModalBottomSheet(
       context: context,
+      backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       builder: (context) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SizedBox(height: 12),
-              const Text(
-                'Pilih Bahasa',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              ListTile(
-                leading: const Icon(Icons.flag, color: Colors.black87),
-                title: const Text('Bahasa Indonesia'),
-                subtitle: const Text('Sedang digunakan'),
-                trailing: const Icon(
-                  Icons.check_circle,
-                  color: Color(0xFFE89B8E),
-                ),
-                onTap: () => Navigator.pop(context),
-              ),
-              ListTile(
-                leading: const Icon(Icons.flag_outlined, color: Colors.grey),
-                title: const Text('English'),
-                subtitle: const Text('Belum tersedia'),
-                enabled: false,
-                trailing: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    'Coming Soon',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.language, size: 64, color: Color(0xFFE89B8E)),
+                const SizedBox(height: 16),
+                Text(
+                  'Coming Soon!',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
                   ),
                 ),
-              ),
-              const SizedBox(height: 12),
-            ],
+                const SizedBox(height: 12),
+                Text(
+                  'Fitur multi-bahasa akan segera hadir.\nSaat ini hanya tersedia dalam Bahasa Indonesia.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.grey[400] : Colors.grey[600],
+                  ),
+                ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFE89B8E),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'OK',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  // Helper method untuk menu item DALAM satu container
   Widget _buildMenuItemInContainer({
     required IconData icon,
     required String title,
@@ -466,6 +581,7 @@ class _SettingsPageState extends State<SettingsPage> {
     required bool isLast,
     Widget? trailing,
     required VoidCallback onTap,
+    required bool isDark,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -473,19 +589,26 @@ class _SettingsPageState extends State<SettingsPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            Icon(icon, color: Colors.black87, size: 24),
+            Icon(
+              icon,
+              color: isDark ? Colors.white70 : Colors.black87,
+              size: 24,
+            ),
             const SizedBox(width: 15),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(fontSize: 15, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 15,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
               ),
             ),
             trailing ??
-                const Icon(
+                Icon(
                   Icons.arrow_forward_ios,
                   size: 16,
-                  color: Colors.grey,
+                  color: isDark ? Colors.white38 : Colors.grey,
                 ),
           ],
         ),

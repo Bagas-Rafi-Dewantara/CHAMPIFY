@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'mycourse_quiz.dart';
+import '../theme_provider.dart';
 
 class MyCourseScorePage extends StatelessWidget {
   // Mode 1: Data detail untuk pembahasan
@@ -26,6 +28,8 @@ class MyCourseScorePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    
     // 1. Hitung Score
     double score = totalQuestions > 0
         ? (correctCount / totalQuestions) * 100
@@ -39,7 +43,7 @@ class MyCourseScorePage extends StatelessWidget {
         : const Color(0xFFFF9494);
 
     return Scaffold(
-      backgroundColor: primarySalmon,
+      backgroundColor: isDark ? const Color(0xFF121212) : primarySalmon,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -50,7 +54,9 @@ class MyCourseScorePage extends StatelessWidget {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: Colors.white.withOpacity(0.2),
+                    backgroundColor: isDark 
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.white.withOpacity(0.2),
                     child: IconButton(
                       icon: const Icon(Icons.close, color: Colors.white),
                       onPressed: () => Navigator.pop(context, 'close'),
@@ -73,9 +79,9 @@ class MyCourseScorePage extends StatelessWidget {
             Expanded(
               child: Container(
                 width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(40),
                     topRight: Radius.circular(40),
                   ),
@@ -102,7 +108,9 @@ class MyCourseScorePage extends StatelessWidget {
                                   child: CircularProgressIndicator(
                                     value: score / 100,
                                     strokeWidth: 12,
-                                    backgroundColor: Colors.grey[200],
+                                    backgroundColor: isDark 
+                                        ? Colors.grey[800]
+                                        : Colors.grey[200],
                                     color: scoreColor,
                                     strokeCap: StrokeCap.round,
                                   ),
@@ -118,11 +126,11 @@ class MyCourseScorePage extends StatelessWidget {
                                         color: scoreColor,
                                       ),
                                     ),
-                                    const Text(
+                                    Text(
                                       "Score",
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: Colors.grey,
+                                        color: isDark ? Colors.grey[400] : Colors.grey,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -143,23 +151,25 @@ class MyCourseScorePage extends StatelessWidget {
                                   correctCount,
                                   const Color(0xFF4CAF50),
                                   Icons.check_circle_outline,
+                                  isDark,
                                 ),
                                 Container(
                                   width: 1,
                                   height: 40,
-                                  color: Colors.grey[300],
+                                  color: isDark ? Colors.grey[700] : Colors.grey[300],
                                 ),
                                 _buildStatItem(
                                   "Wrong",
                                   wrong,
                                   const Color(0xFFFF5252),
                                   Icons.highlight_off_rounded,
+                                  isDark,
                                 ),
                               ],
                             ),
 
                             const SizedBox(height: 25),
-                            const Divider(),
+                            Divider(color: isDark ? Colors.grey[700] : null),
                             const SizedBox(height: 15),
 
                             // 3. LIST REVIEW JAWABAN
@@ -171,7 +181,7 @@ class MyCourseScorePage extends StatelessWidget {
                                   style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.bold,
-                                    color: Colors.grey[800],
+                                    color: isDark ? Colors.white : Colors.grey[800],
                                   ),
                                 ),
                               ),
@@ -182,13 +192,18 @@ class MyCourseScorePage extends StatelessWidget {
                                 physics: const NeverScrollableScrollPhysics(),
                                 itemCount: questions!.length,
                                 itemBuilder: (context, index) {
-                                  return _buildReviewCard(index);
+                                  return _buildReviewCard(index, isDark);
                                 },
                               ),
                               // Kasih jarak di bawah list biar ga nempel banget sama tombol
                               const SizedBox(height: 10),
                             ] else ...[
-                              const Text("Detail pembahasan tidak tersedia."),
+                              Text(
+                                "Detail pembahasan tidak tersedia.",
+                                style: TextStyle(
+                                  color: isDark ? Colors.grey[400] : Colors.black,
+                                ),
+                              ),
                               const SizedBox(height: 20),
                             ],
                           ],
@@ -200,10 +215,10 @@ class MyCourseScorePage extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.fromLTRB(25, 10, 25, 25),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
                             blurRadius: 10,
                             offset: const Offset(0, -5),
                           ),
@@ -217,7 +232,9 @@ class MyCourseScorePage extends StatelessWidget {
                             width: double.infinity,
                             height: 45,
                             child: ElevatedButton(
-                              onPressed: () => Navigator.pop(context, 'close'),
+                              onPressed: () {
+                                Navigator.pop(context, 'close');
+                              },
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: primarySalmon,
                                 shape: RoundedRectangleBorder(
@@ -226,7 +243,7 @@ class MyCourseScorePage extends StatelessWidget {
                                 elevation: 0,
                               ),
                               child: const Text(
-                                "Back to Course",
+                                "Kembali ke Kursus",
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 16,
@@ -285,7 +302,7 @@ class MyCourseScorePage extends StatelessWidget {
   }
 
   // WIDGET HELPER: Item Statistik Kecil
-  Widget _buildStatItem(String label, int value, Color color, IconData icon) {
+  Widget _buildStatItem(String label, int value, Color color, IconData icon, bool isDark) {
     return Column(
       children: [
         Icon(icon, color: color, size: 28),
@@ -298,13 +315,19 @@ class MyCourseScorePage extends StatelessWidget {
             color: color,
           ),
         ),
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[600])),
+        Text(
+          label, 
+          style: TextStyle(
+            fontSize: 12, 
+            color: isDark ? Colors.grey[400] : Colors.grey[600],
+          ),
+        ),
       ],
     );
   }
 
   // WIDGET HELPER: Kartu Review Per Soal
-  Widget _buildReviewCard(int index) {
+  Widget _buildReviewCard(int index, bool isDark) {
     final question = questions![index];
 
     final String questionText = question['question_text'] ?? "No Question";
@@ -332,12 +355,14 @@ class MyCourseScorePage extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 20),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF2A2A2A) : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -371,10 +396,10 @@ class MyCourseScorePage extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             questionText,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.black87,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
           const SizedBox(height: 12),
@@ -382,6 +407,7 @@ class MyCourseScorePage extends StatelessWidget {
             "Jawaban Kamu:",
             isSkipped ? "-" : options[userAnswerIndex],
             isCorrect ? Colors.green : Colors.red,
+            isDark,
           ),
           if (!isCorrect) ...[
             const SizedBox(height: 4),
@@ -389,6 +415,7 @@ class MyCourseScorePage extends StatelessWidget {
               "Jawaban Benar:",
               options[correctAnswerIndex],
               Colors.green,
+              isDark,
             ),
           ],
           const SizedBox(height: 15),
@@ -396,9 +423,15 @@ class MyCourseScorePage extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: const Color(0xFFFFF8E1),
+              color: isDark 
+                  ? const Color(0xFF3A3A00)
+                  : const Color(0xFFFFF8E1),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFFFE082)),
+              border: Border.all(
+                color: isDark 
+                    ? const Color(0xFFFFE082)
+                    : const Color(0xFFFFE082),
+              ),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,7 +455,7 @@ class MyCourseScorePage extends StatelessWidget {
                   explanation,
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.grey[800],
+                    color: isDark ? Colors.grey[300] : Colors.grey[800],
                     height: 1.4,
                   ),
                 ),
@@ -434,14 +467,19 @@ class MyCourseScorePage extends StatelessWidget {
     );
   }
 
-  Widget _buildAnswerRow(String label, String answer, Color color) {
+  Widget _buildAnswerRow(String label, String answer, Color color, bool isDark) {
     return RichText(
       text: TextSpan(
-        style: const TextStyle(fontSize: 14, color: Colors.black),
+        style: TextStyle(
+          fontSize: 14, 
+          color: isDark ? Colors.white70 : Colors.black,
+        ),
         children: [
           TextSpan(
             text: "$label ",
-            style: TextStyle(color: Colors.grey[600]),
+            style: TextStyle(
+              color: isDark ? Colors.grey[400] : Colors.grey[600],
+            ),
           ),
           TextSpan(
             text: answer,

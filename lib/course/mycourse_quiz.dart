@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 import 'mycourse_score.dart';
+import '../theme_provider.dart';
 
 class MyCourseQuizPage extends StatefulWidget {
   final List<dynamic> rawQuestions;
@@ -213,11 +215,15 @@ class _MyCourseQuizPageState extends State<MyCourseQuizPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    
     if (_uiQuestions.isEmpty) {
       return Scaffold(
-        backgroundColor: primarySalmon,
-        body: const Center(
-          child: CircularProgressIndicator(color: Colors.white),
+        backgroundColor: isDark ? const Color(0xFF121212) : primarySalmon,
+        body: Center(
+          child: CircularProgressIndicator(
+            color: isDark ? primarySalmon : Colors.white,
+          ),
         ),
       );
     }
@@ -228,225 +234,222 @@ class _MyCourseQuizPageState extends State<MyCourseQuizPage> {
     return PopScope(
       canPop: false,
       child: Scaffold(
-        backgroundColor: primarySalmon,
+        backgroundColor: isDark ? const Color(0xFF121212) : primarySalmon,
         appBar: AppBar(
-          backgroundColor: Colors.transparent,
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : primarySalmon,
           elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.close, color: Colors.white),
-            onPressed: () => Navigator.pop(
-              context,
-            ), // Logic exit dialog kamu bisa ditaruh sini
+          leading: CircleAvatar(
+            backgroundColor: isDark 
+                ? Colors.white.withOpacity(0.1)
+                : Colors.white.withOpacity(0.2),
+            child: IconButton(
+              icon: Icon(
+                Icons.close,
+                color: isDark ? Colors.white : Colors.white,
+              ),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          centerTitle: true,
+          title: Text(
+            "Quiz ${_currentQuestionIndex + 1} of ${_uiQuestions.length}",
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.white,
+            ),
           ),
         ),
         body: Column(
           children: [
-            // ... Header Quiz Time kamu (Sama persis) ...
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text(
-                    "Quiz Time",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.white54),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      "${_currentQuestionIndex + 1}/${_uiQuestions.length}",
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Card Putih
             Expanded(
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(25, 30, 25, 20),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  borderRadius: const BorderRadius.only(
                     topLeft: Radius.circular(40),
                     topRight: Radius.circular(40),
                   ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    LinearProgressIndicator(
-                      value: (_currentQuestionIndex + 1) / _uiQuestions.length,
-                      backgroundColor: Colors.grey[200],
-                      color: primarySalmon,
-                      minHeight: 8,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    const SizedBox(height: 30),
-
-                    Text(
-                      question['question'],
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        height: 1.4,
+                child: Padding(
+                  padding: const EdgeInsets.all(25),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      LinearProgressIndicator(
+                        value: (_currentQuestionIndex + 1) / _uiQuestions.length,
+                        backgroundColor: isDark 
+                            ? Colors.grey[800] 
+                            : Colors.grey[200],
+                        color: primarySalmon,
+                        minHeight: 8,
+                        borderRadius: BorderRadius.circular(10),
                       ),
-                    ),
-                    const SizedBox(height: 20),
+                      const SizedBox(height: 30),
 
-                    Expanded(
-                      child: ListView.separated(
-                        itemCount: (question['options'] as List).length,
-                        separatorBuilder: (ctx, i) =>
-                            const SizedBox(height: 15),
-                        itemBuilder: (ctx, index) {
-                          final option = question['options'][index];
-                          final bool isSelected = _selectedAnswerIndex == index;
-                          return GestureDetector(
-                            onTap: () => _handleOptionTap(index),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: isSelected ? lightSalmon : Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: isSelected
-                                      ? primarySalmon
-                                      : Colors.grey.shade300,
-                                  width: isSelected ? 2 : 1,
+                      Text(
+                        question['question'],
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          height: 1.4,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      Expanded(
+                        child: ListView.separated(
+                          itemCount: (question['options'] as List).length,
+                          separatorBuilder: (ctx, i) =>
+                              const SizedBox(height: 15),
+                          itemBuilder: (ctx, index) {
+                            final option = question['options'][index];
+                            final bool isSelected = _selectedAnswerIndex == index;
+                            return GestureDetector(
+                              onTap: () => _handleOptionTap(index),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: isSelected 
+                                      ? (isDark 
+                                          ? primarySalmon.withOpacity(0.2)
+                                          : lightSalmon)
+                                      : (isDark 
+                                          ? const Color(0xFF2A2A2A)
+                                          : Colors.white),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? primarySalmon
+                                        : (isDark 
+                                            ? Colors.grey.shade700
+                                            : Colors.grey.shade300),
+                                    width: isSelected ? 2 : 1,
+                                  ),
                                 ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 30,
-                                    height: 30,
-                                    margin: const EdgeInsets.only(right: 15),
-                                    decoration: BoxDecoration(
-                                      color: isSelected
-                                          ? primarySalmon
-                                          : Colors.grey[200],
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Center(
-                                      child: Text(
-                                        String.fromCharCode(65 + index),
-                                        style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          color: isSelected
-                                              ? Colors.white
-                                              : Colors.grey[600],
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 30,
+                                      height: 30,
+                                      margin: const EdgeInsets.only(right: 15),
+                                      decoration: BoxDecoration(
+                                        color: isSelected
+                                            ? primarySalmon
+                                            : (isDark 
+                                                ? Colors.grey[700]
+                                                : Colors.grey[200]),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Center(
+                                        child: Text(
+                                          String.fromCharCode(65 + index),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : (isDark 
+                                                    ? Colors.grey[400]
+                                                    : Colors.grey[600]),
+                                          ),
                                         ),
                                       ),
                                     ),
-                                  ),
-                                  Expanded(
-                                    child: Text(
-                                      option,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 16,
-                                        color: isSelected
-                                            ? primarySalmon
-                                            : Colors.black87,
+                                    Expanded(
+                                      child: Text(
+                                        option,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                          color: isSelected
+                                              ? primarySalmon
+                                              : (isDark 
+                                                  ? Colors.white70
+                                                  : Colors.black87),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  if (isSelected)
-                                    Icon(
-                                      Icons.check_circle,
-                                      color: primarySalmon,
-                                    ),
-                                ],
+                                    if (isSelected)
+                                      Icon(
+                                        Icons.check_circle,
+                                        color: primarySalmon,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // Hint Logic
+                      if (_isHintVisible)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 15),
+                          child: CustomPaint(
+                            painter: DashedRoundedRectPainter(
+                              color: const Color(0xFFFBC02D),
+                            ),
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(15),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFFF9C4).withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(15),
+                              ),
+                              child: Text(
+                                question['hint'] ?? "Tidak ada hint",
+                                style: const TextStyle(color: Color(0xFFF57F17)),
                               ),
                             ),
-                          );
-                        },
-                      ),
-                    ),
+                          ),
+                        ),
 
-                    // ... Hint Logic kamu (Sama persis) ...
-                    if (_isHintVisible)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 15),
-                        child: CustomPaint(
-                          painter: DashedRoundedRectPainter(
+                      Center(
+                        child: TextButton.icon(
+                          onPressed: () =>
+                              setState(() => _isHintVisible = !_isHintVisible),
+                          icon: Icon(
+                            _isHintVisible
+                                ? Icons.visibility_off
+                                : Icons.lightbulb,
                             color: const Color(0xFFFBC02D),
                           ),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(15),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFFFF9C4).withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(15),
-                            ),
-                            child: Text(
-                              question['hint'] ?? "Tidak ada hint",
-                              style: const TextStyle(color: Color(0xFFF57F17)),
-                            ),
+                          label: Text(
+                            _isHintVisible ? "Close Hint" : "Need a hint?",
+                            style: const TextStyle(color: Color(0xFFFBC02D)),
                           ),
                         ),
                       ),
+                      const SizedBox(height: 5),
 
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: () =>
-                            setState(() => _isHintVisible = !_isHintVisible),
-                        icon: Icon(
-                          _isHintVisible
-                              ? Icons.visibility_off
-                              : Icons.lightbulb,
-                          color: const Color(0xFFFBC02D),
-                        ),
-                        label: Text(
-                          _isHintVisible ? "Close Hint" : "Need a hint?",
-                          style: const TextStyle(color: Color(0xFFFBC02D)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-
-                    SizedBox(
-                      width: double.infinity,
-                      height: 55,
-                      child: ElevatedButton(
-                        onPressed: _handleNextButton,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: primarySalmon,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 55,
+                        child: ElevatedButton(
+                          onPressed: _handleNextButton,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: primarySalmon,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            elevation: 0,
                           ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          isLast ? "Finish Quiz" : "Next Question",
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
+                          child: Text(
+                            isLast ? "Finish Quiz" : "Next Question",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -485,8 +488,6 @@ List<Map<String, dynamic>> processDbDataForScore(List<dynamic> rawDbData) {
 
 // DashedRoundedRectPainter kamu tetap sama, tidak perlu diubah.
 class DashedRoundedRectPainter extends CustomPainter {
-  // ... Copy paste kode painter kamu sebelumnya di sini ...
-  // (Isinya tidak saya tulis ulang untuk menghemat tempat, karena sudah benar)
   final double strokeWidth;
   final Color color;
   final double gap;

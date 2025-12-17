@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:youtube_player_flutter/youtube_player_flutter.dart';
-import '../payment.dart'; // Import halaman payment
-import '../main.dart'; // Akses supabase
+import 'package:provider/provider.dart';
+import '../payment.dart';
+import '../main.dart';
+import '../theme_provider.dart';
 
 class DetailCoursePage extends StatefulWidget {
   final Map<String, dynamic> courseData;
@@ -17,9 +19,8 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
   int _selectedRatingFilter = 0;
   final Color primaryColor = const Color(0xFFFF9494);
 
-  bool _isCheckingStatus = false; // Loading saat cek status pembelian
+  bool _isCheckingStatus = false;
 
-  // --- STATE VIDEO PLAYER ---
   YoutubePlayerController? _controller;
   bool _isVideoPlaying = false;
 
@@ -29,15 +30,12 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
     super.dispose();
   }
 
-  // --- FUNGSI CEK PEMBELIAN SEBELUM BAYAR ---
-  // --- FUNGSI CEK PEMBELIAN SEBELUM BAYAR (FIXED) ---
   Future<void> _handlePurchaseButton(String planType, double price) async {
     setState(() => _isCheckingStatus = true);
 
     try {
       final user = supabase.auth.currentUser;
 
-      // 1. Cek Login
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Silahkan login terlebih dahulu.")),
@@ -46,19 +44,17 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
         return;
       }
 
-      // 2. Cek Database (Tabel 'transactions')
       final idCourse = widget.courseData['id_course'];
 
       final existingPurchase = await supabase
-          .from('transactions') // <--- NAMA TABEL YANG BENAR
+          .from('transactions')
           .select('id_pembayaran')
           .eq('id_pengguna', user.id)
           .eq('id_course', idCourse)
-          .eq('payment_status', true) // <--- CEK BOOLEAN TRUE, BUKAN 'success'
+          .eq('payment_status', true)
           .maybeSingle();
 
       if (existingPurchase != null) {
-        // --- JIKA SUDAH BELI ---
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -69,7 +65,6 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
           );
         }
       } else {
-        // --- JIKA BELUM BELI -> LANJUT KE PAYMENT ---
         if (mounted) {
           Navigator.push(
             context,
@@ -95,7 +90,6 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
     }
   }
 
-  // --- FUNGSI UTAMA PLAY VIDEO ---
   void _playVideo(String videoUrl) {
     final String? videoId = YoutubePlayer.convertUrlToId(videoUrl);
 
@@ -134,13 +128,14 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    
     final data = widget.courseData;
     final String title = data['nama_course'] ?? 'Course Detail';
     final String imageUrl = data['link_gambar'] ?? '';
     final String duration = data['durasi_course'] ?? '-';
     final int lessons = data['jumlah_lesson'] ?? 0;
 
-    // Harga
     final int pricePremium = (data['harga_premium'] is int)
         ? data['harga_premium']
         : (data['harga_premium'] as double? ?? 0).toInt();
@@ -148,7 +143,6 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
         ? data['harga_reguler']
         : (data['harga_reguler'] as double? ?? 0).toInt();
 
-    // Mentor
     final Map<String, dynamic>? mentorData = data['mentor'];
     final String mentorName = mentorData?['nama_mentor'] ?? "Unknown Mentor";
     final String mentorImage =
@@ -163,7 +157,6 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
         data['deskripsi_course'] ??
         "Lorem ipsum dolor sit amet consectetur. Fusce mauris consectetur habitasse aliquam eu ante convallis eu.";
 
-    // Rating
     final List<dynamic> ratingsList = data['rating'] ?? [];
     double averageRating = 0.0;
     if (ratingsList.isNotEmpty) {
@@ -185,29 +178,31 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
       ),
       builder: (context, player) {
         return Scaffold(
-          backgroundColor: Colors.white,
+          backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
           appBar: AppBar(
-            backgroundColor: Colors.white,
+            backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
             elevation: 0,
             centerTitle: true,
             leading: Padding(
               padding: const EdgeInsets.all(8.0),
               child: CircleAvatar(
-                backgroundColor: Colors.grey.withOpacity(0.1),
+                backgroundColor: isDark 
+                    ? Colors.grey[800]!.withOpacity(0.5)
+                    : Colors.grey.withOpacity(0.1),
                 child: IconButton(
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.arrow_back_ios_new,
                     size: 18,
-                    color: Colors.black,
+                    color: isDark ? Colors.white : Colors.black,
                   ),
                   onPressed: () => Navigator.pop(context),
                 ),
               ),
             ),
-            title: const Text(
+            title: Text(
               "Course Details",
               style: TextStyle(
-                color: Colors.black,
+                color: isDark ? Colors.white : Colors.black,
                 fontWeight: FontWeight.bold,
                 fontSize: 18,
               ),
@@ -220,7 +215,7 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
               children: [
                 const SizedBox(height: 20),
 
-                // --- 1. HERO IMAGE / VIDEO PLAYER ---
+                // Hero Image / Video Player
                 Container(
                   height: 200,
                   width: double.infinity,
@@ -261,7 +256,6 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                                       : null,
                                 ),
                               ),
-                              // Tombol Play Besar (Memutar video pertama)
                               GestureDetector(
                                 onTap: () {
                                   final List<dynamic> playlist =
@@ -306,40 +300,59 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
 
                 const SizedBox(height: 20),
 
-                // JUDUL & INFO
+                // Title & Info
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
                     height: 1.3,
+                    color: isDark ? Colors.white : Colors.black,
                   ),
                 ),
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    const Icon(Icons.access_time, size: 16, color: Colors.grey),
+                    Icon(
+                      Icons.access_time, 
+                      size: 16, 
+                      color: isDark ? Colors.grey[400] : Colors.grey,
+                    ),
                     const SizedBox(width: 5),
-                    Text(duration, style: const TextStyle(color: Colors.grey)),
+                    Text(
+                      duration, 
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey,
+                      ),
+                    ),
                     const SizedBox(width: 10),
-                    const Icon(Icons.circle, size: 4, color: Colors.grey),
+                    Icon(
+                      Icons.circle, 
+                      size: 4, 
+                      color: isDark ? Colors.grey[400] : Colors.grey,
+                    ),
                     const SizedBox(width: 10),
                     Text(
                       "$lessons lessons",
-                      style: const TextStyle(color: Colors.grey),
+                      style: TextStyle(
+                        color: isDark ? Colors.grey[400] : Colors.grey,
+                      ),
                     ),
                     const Spacer(),
                     const Icon(Icons.star, size: 18, color: Colors.amber),
                     const SizedBox(width: 5),
                     Text(
                       ratingDisplay,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
 
-                // MENTOR
+                // Mentor
                 Row(
                   children: [
                     CircleAvatar(
@@ -354,16 +367,17 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                         children: [
                           Text(
                             mentorName,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 14,
+                              color: isDark ? Colors.white : Colors.black,
                             ),
                             softWrap: true,
                           ),
                           Text(
                             mentorRole,
-                            style: const TextStyle(
-                              color: Colors.grey,
+                            style: TextStyle(
+                              color: isDark ? Colors.grey[400] : Colors.grey,
                               fontSize: 10,
                             ),
                             softWrap: true,
@@ -388,10 +402,11 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                               constraints: const BoxConstraints(maxWidth: 80),
                               child: Text(
                                 mentorStats,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 10,
                                   height: 1.2,
+                                  color: isDark ? Colors.white : Colors.black,
                                 ),
                               ),
                             ),
@@ -403,44 +418,48 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                 ),
                 const SizedBox(height: 20),
 
-                // DESCRIPTION
-                const Text(
+                // Description
+                Text(
                   "Descriptions",
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 16,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   description,
-                  style: const TextStyle(
-                    color: Colors.grey,
+                  style: TextStyle(
+                    color: isDark ? Colors.grey[300] : Colors.grey,
                     height: 1.5,
                     fontSize: 13,
                   ),
                 ),
                 const SizedBox(height: 25),
 
-                // TABS
+                // Tabs
                 Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    _buildTabItem("Lessons", 0),
+                    _buildTabItem("Lessons", 0, isDark),
                     const SizedBox(width: 30),
-                    _buildTabItem("Reviews", 1),
+                    _buildTabItem("Reviews", 1, isDark),
                     const SizedBox(width: 30),
-                    _buildTabItem("Package details", 2),
+                    _buildTabItem("Package details", 2, isDark),
                   ],
                 ),
                 const SizedBox(height: 20),
 
-                if (_selectedTabIndex == 0) _buildLessonsList(title),
-                if (_selectedTabIndex == 1) _buildReviewsList(ratingsList),
-                if (_selectedTabIndex == 2) _buildPackageDetails(),
+                if (_selectedTabIndex == 0) _buildLessonsList(title, isDark),
+                if (_selectedTabIndex == 1) _buildReviewsList(ratingsList, isDark),
+                if (_selectedTabIndex == 2) _buildPackageDetails(isDark),
                 const SizedBox(height: 130),
               ],
             ),
           ),
           bottomSheet: Container(
-            color: Colors.white,
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
             height: 140,
             child: Column(
@@ -449,7 +468,6 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                   width: double.infinity,
                   height: 45,
                   child: ElevatedButton(
-                    // --- TOMBOL PREMIUM DENGAN CEK STATUS ---
                     onPressed: _isCheckingStatus
                         ? null
                         : () => _handlePurchaseButton(
@@ -486,7 +504,6 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                   width: double.infinity,
                   height: 45,
                   child: OutlinedButton(
-                    // --- TOMBOL REGULAR DENGAN CEK STATUS ---
                     onPressed: _isCheckingStatus
                         ? null
                         : () => _handlePurchaseButton(
@@ -517,8 +534,7 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
     );
   }
 
-  // --- 2. UPDATE LOGIKA LOCKED DISINI ---
-  Widget _buildLessonsList(String courseTitle) {
+  Widget _buildLessonsList(String courseTitle, bool isDark) {
     final List<dynamic> rawLessons = widget.courseData['playlist'] ?? [];
     List<dynamic> sortedLessons = List.from(rawLessons);
     sortedLessons.sort((a, b) {
@@ -528,12 +544,14 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
     });
 
     if (sortedLessons.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 20),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 20),
         child: Center(
           child: Text(
             "Belum ada lesson tersedia.",
-            style: TextStyle(color: Colors.grey),
+            style: TextStyle(
+              color: isDark ? Colors.grey[400] : Colors.grey,
+            ),
           ),
         ),
       );
@@ -544,14 +562,11 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
         int index = entry.key;
         Map<String, dynamic> lesson = entry.value;
 
-        // Logika: Hanya lesson pertama yang terbuka
         bool isLocked = index == 0 ? false : true;
 
         return InkWell(
           onTap: () {
-            // --- CEK APAKAH DIKUNCI ---
             if (isLocked) {
-              // Jika dikunci, tampilkan Notifikasi
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text(
@@ -561,9 +576,8 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  backgroundColor: const Color(0xFFE53935), // Warna Merah
-                  behavior: SnackBarBehavior
-                      .floating, // Biar melayang di atas bottom sheet
+                  backgroundColor: const Color(0xFFE53935),
+                  behavior: SnackBarBehavior.floating,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -572,7 +586,6 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                 ),
               );
             } else {
-              // Jika tidak dikunci, putar video
               if (lesson['link_video'] != null) {
                 _playVideo(lesson['link_video']);
               }
@@ -582,15 +595,14 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
             title: lesson['nama_playlist'] ?? "Untitled Lesson",
             duration: lesson['durasi_video'] ?? "00:00",
             isLocked: isLocked,
+            isDark: isDark,
           ),
         );
       }).toList(),
     );
   }
 
-  // ... (Sisa fungsi helper lainnya _buildReviewsList, _buildPackageDetails, dll SAMA PERSIS dengan sebelumnya) ...
-
-  Widget _buildReviewsList(List<dynamic> allRatings) {
+  Widget _buildReviewsList(List<dynamic> allRatings, bool isDark) {
     final List<dynamic> filteredRatings = _selectedRatingFilter == 0
         ? allRatings
         : allRatings.where((r) {
@@ -607,11 +619,11 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
           scrollDirection: Axis.horizontal,
           child: Row(
             children: [
-              _buildFilterChip("All Ratings", 0),
-              _buildFilterChip("★ 5", 5),
-              _buildFilterChip("★ 4", 4),
-              _buildFilterChip("★ 3", 3),
-              _buildFilterChip("★ 2", 2),
+              _buildFilterChip("All Ratings", 0, isDark),
+              _buildFilterChip("⭐ 5", 5, isDark),
+              _buildFilterChip("⭐ 4", 4, isDark),
+              _buildFilterChip("⭐ 3", 3, isDark),
+              _buildFilterChip("⭐ 2", 2, isDark),
             ],
           ),
         ),
@@ -624,7 +636,9 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
                 _selectedRatingFilter == 0
                     ? "Belum ada ulasan."
                     : "Tidak ada ulasan bintang $_selectedRatingFilter.",
-                style: const TextStyle(color: Colors.grey),
+                style: TextStyle(
+                  color: isDark ? Colors.grey[400] : Colors.grey,
+                ),
               ),
             ),
           )
@@ -651,34 +665,41 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
               comment: comment,
               rating: score,
               userImageUrl: userImage,
+              isDark: isDark,
             );
-          }).toList(),
+          }),
       ],
     );
   }
 
-  Widget _buildPackageDetails() {
+  Widget _buildPackageDetails(bool isDark) {
     return Column(
       children: [
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: const Color(0xFFFFF9C4).withOpacity(0.5),
+            color: isDark 
+                ? const Color(0xFF2D2D2D) 
+                : const Color(0xFFFFF9C4).withOpacity(0.5),
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "Regular Benefits",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 16,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
               ),
               const SizedBox(height: 15),
-              _buildBenefitItem("Lifetime Video Access"),
-              _buildBenefitItem("Quiz Features"),
-              _buildBenefitItem("Final Project for Portfolio"),
-              _buildBenefitItem("E-Certificate of Completion"),
+              _buildBenefitItem("Lifetime Video Access", isDark),
+              _buildBenefitItem("Quiz Features", isDark),
+              _buildBenefitItem("Final Project for Portfolio", isDark),
+              _buildBenefitItem("E-Certificate of Completion", isDark),
             ],
           ),
         ),
@@ -687,7 +708,11 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
           width: double.infinity,
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            gradient: LinearGradient(
+            color: isDark
+                ? const Color(0xFF3D2D2D)
+                : const Color(0xFFFFCC80).withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20),
+            gradient: isDark ? null : LinearGradient(
               colors: [
                 const Color(0xFFFFCC80).withOpacity(0.3),
                 const Color(0xFFFFAB91).withOpacity(0.3),
@@ -695,18 +720,21 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
-            borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
+              Text(
                 "Premium Benefits",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold, 
+                  fontSize: 16,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
               ),
               const SizedBox(height: 15),
-              _buildBenefitItem("All Benefits in Regular"),
-              _buildBenefitItem("Exclusive Mentoring Once a Week"),
+              _buildBenefitItem("All Benefits in Regular", isDark),
+              _buildBenefitItem("Exclusive Mentoring Once a Week", isDark),
             ],
           ),
         ),
@@ -715,7 +743,7 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
     );
   }
 
-  Widget _buildBenefitItem(String text) {
+  Widget _buildBenefitItem(String text, bool isDark) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
@@ -725,7 +753,10 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 13, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 13, 
+                color: isDark ? Colors.grey[300] : Colors.black87,
+              ),
             ),
           ),
         ],
@@ -733,7 +764,7 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
     );
   }
 
-  Widget _buildFilterChip(String label, int filterValue) {
+  Widget _buildFilterChip(String label, int filterValue, bool isDark) {
     bool isSelected = _selectedRatingFilter == filterValue;
     return GestureDetector(
       onTap: () => setState(() => _selectedRatingFilter = filterValue),
@@ -741,14 +772,21 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
         margin: const EdgeInsets.only(right: 10),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFAB91) : Colors.white,
+          color: isSelected 
+              ? const Color(0xFFFFAB91) 
+              : (isDark ? const Color(0xFF2D2D2D) : Colors.white),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFFFAB91), width: 1),
+          border: Border.all(
+            color: const Color(0xFFFFAB91), 
+            width: 1,
+          ),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : const Color(0xFFFFAB91),
+            color: isSelected 
+                ? Colors.white 
+                : (isDark ? Colors.grey[400] : const Color(0xFFFFAB91)),
             fontWeight: FontWeight.bold,
             fontSize: 12,
           ),
@@ -757,7 +795,7 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
     );
   }
 
-  Widget _buildTabItem(String title, int index) {
+  Widget _buildTabItem(String title, int index, bool isDark) {
     bool isActive = _selectedTabIndex == index;
     return GestureDetector(
       onTap: () => setState(() => _selectedTabIndex = index),
@@ -769,7 +807,7 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
               fontWeight: FontWeight.bold,
               color: isActive
                   ? const Color(0xFFFF9494)
-                  : const Color(0xFFFFCCB6),
+                  : (isDark ? Colors.grey[500] : const Color(0xFFFFCCB6)),
               fontSize: 14,
             ),
           ),
@@ -787,33 +825,25 @@ class _DetailCoursePageState extends State<DetailCoursePage> {
       ),
     );
   }
-
-  Widget _buildDot(bool isActive) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 3),
-      width: 8,
-      height: 8,
-      decoration: BoxDecoration(
-        color: isActive ? const Color(0xFFFF9494) : const Color(0xFFFFE4C7),
-        shape: BoxShape.circle,
-      ),
-    );
-  }
 }
 
 // ==========================================
-// WIDGET KECIL (LessonItem, ReviewItem) SAMA
+// WIDGET KECIL
 // ==========================================
 class LessonItem extends StatelessWidget {
   final String title;
   final String duration;
   final bool isLocked;
+  final bool isDark;
+  
   const LessonItem({
     super.key,
     required this.title,
     required this.duration,
     required this.isLocked,
+    required this.isDark,
   });
+  
   @override
   Widget build(BuildContext context) {
     const Color salmonColor = Color(0xFFFF9494);
@@ -821,9 +851,14 @@ class LessonItem extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: salmonColor.withOpacity(0.4), width: 1),
+        border: Border.all(
+          color: isDark 
+              ? Colors.grey.shade700 
+              : salmonColor.withOpacity(0.4),
+          width: 1,
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
@@ -833,13 +868,17 @@ class LessonItem extends StatelessWidget {
             height: 35,
             decoration: BoxDecoration(
               color: isLocked
-                  ? const Color(0xFFFFF0EB)
-                  : const Color(0xFFFF9494).withOpacity(0.2),
+                  ? (isDark 
+                      ? const Color(0xFF2D2D2D) 
+                      : const Color(0xFFFFF0EB))
+                  : salmonColor.withOpacity(0.2),
               shape: BoxShape.circle,
             ),
             child: Icon(
               isLocked ? Icons.lock_rounded : Icons.play_arrow_rounded,
-              color: isLocked ? const Color(0xFFFFCCB6) : salmonColor,
+              color: isLocked 
+                  ? (isDark ? Colors.grey[600] : const Color(0xFFFFCCB6))
+                  : salmonColor,
               size: 18,
             ),
           ),
@@ -847,10 +886,10 @@ class LessonItem extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
-                color: Colors.black87,
+                color: isDark ? Colors.white : Colors.black87,
                 height: 1.2,
               ),
             ),
@@ -858,9 +897,9 @@ class LessonItem extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             duration,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.bold,
-              color: Colors.black54,
+              color: isDark ? Colors.grey[400] : Colors.black54,
               fontSize: 12,
             ),
           ),
@@ -876,6 +915,8 @@ class ReviewItem extends StatelessWidget {
   final String comment;
   final int rating;
   final String userImageUrl;
+  final bool isDark;
+  
   const ReviewItem({
     super.key,
     required this.name,
@@ -883,21 +924,29 @@ class ReviewItem extends StatelessWidget {
     required this.comment,
     required this.rating,
     required this.userImageUrl,
+    required this.isDark,
   });
+  
   @override
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(15),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(15),
-        border: Border.all(color: Colors.grey.shade100),
+        // ✅ FIX: BORDER & SHADOW UNTUK LIGHT MODE
+        border: isDark 
+            ? Border.all(color: Colors.grey.shade800)
+            : Border.all(color: Colors.grey.shade300, width: 2),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.05),
-            blurRadius: 10,
+            color: isDark 
+                ? Colors.black.withOpacity(0.2)
+                : Colors.grey.shade300,
+            blurRadius: 15,
             offset: const Offset(0, 5),
+            spreadRadius: 2,
           ),
         ],
       ),
@@ -917,14 +966,18 @@ class ReviewItem extends StatelessWidget {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
+                      color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
                   Text(
                     role,
-                    style: const TextStyle(color: Colors.grey, fontSize: 10),
+                    style: TextStyle(
+                      color: isDark ? Colors.grey[400] : Colors.grey, 
+                      fontSize: 10,
+                    ),
                   ),
                 ],
               ),
@@ -933,9 +986,9 @@ class ReviewItem extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             comment,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: Colors.black54,
+              color: isDark ? Colors.grey[300] : Colors.black54,
               height: 1.4,
             ),
           ),
@@ -948,7 +1001,7 @@ class ReviewItem extends StatelessWidget {
                 size: 18,
                 color: index < rating
                     ? const Color(0xFFFFD54F)
-                    : Colors.grey.shade300,
+                    : (isDark ? Colors.grey.shade700 : Colors.grey.shade300),
               ),
             ),
           ),
