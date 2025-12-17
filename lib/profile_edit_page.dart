@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 
 import 'authentication/login.dart' show LoginPage;
 import 'main.dart';
+import 'theme_provider.dart';
 
 class ProfileEditPage extends StatefulWidget {
   const ProfileEditPage({Key? key}) : super(key: key);
@@ -207,17 +209,38 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    
     final avatar = _selectedImageFile != null
         ? Image.file(_selectedImageFile!, fit: BoxFit.cover)
         : _selectedImageBytes != null
         ? Image.memory(_selectedImageBytes!, fit: BoxFit.cover)
         : (_avatarUrl != null
               ? Image.network(_avatarUrl!, fit: BoxFit.cover)
-              : const Icon(Icons.person, size: 36, color: Colors.white));
+              : Icon(
+                  Icons.person, 
+                  size: 36, 
+                  color: isDark ? Colors.grey[600] : Colors.grey[400],
+                ));
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
       appBar: AppBar(
-        title: const Text('Edit Profil'),
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back,
+            color: isDark ? Colors.white : Colors.black,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Edit Profil',
+          style: TextStyle(
+            color: isDark ? Colors.white : Colors.black,
+          ),
+        ),
         centerTitle: true,
         actions: [
           TextButton(
@@ -228,7 +251,12 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                     width: 16,
                     child: CircularProgressIndicator(strokeWidth: 2),
                   )
-                : const Text('Simpan'),
+                : Text(
+                    'Simpan',
+                    style: TextStyle(
+                      color: isDark ? const Color(0xFFE89B8E) : const Color(0xFFE89B8E),
+                    ),
+                  ),
           ),
         ],
       ),
@@ -240,7 +268,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
               children: [
                 CircleAvatar(
                   radius: 48,
-                  backgroundColor: Colors.grey.shade300,
+                  backgroundColor: isDark ? Colors.grey[800] : Colors.grey.shade300,
                   child: ClipOval(
                     child: SizedBox(width: 90, height: 90, child: avatar),
                   ),
@@ -252,80 +280,123 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                     onTap: _pickImage,
                     child: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE89B8E),
                         shape: BoxShape.circle,
                         boxShadow: [
-                          BoxShadow(color: Colors.black26, blurRadius: 4),
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.2),
+                            blurRadius: 4,
+                          ),
                         ],
                       ),
-                      child: const Icon(Icons.photo_camera, size: 18),
+                      child: const Icon(
+                        Icons.photo_camera, 
+                        size: 18,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
-            TextField(
+            _buildTextField(
               controller: _nameController,
+              label: 'Nama lengkap',
+              hint: 'Masukkan nama',
+              isDark: isDark,
               textCapitalization: TextCapitalization.words,
-              decoration: const InputDecoration(
-                labelText: 'Nama lengkap',
-                hintText: 'Masukkan nama',
-              ),
             ),
             const SizedBox(height: 12),
-            TextField(
+            _buildTextField(
               controller: _majorController,
-              decoration: const InputDecoration(
-                labelText: 'Jurusan / Major',
-                hintText: 'Contoh: Akuntansi',
-              ),
+              label: 'Jurusan / Major',
+              hint: 'Contoh: Akuntansi',
+              isDark: isDark,
             ),
             const SizedBox(height: 12),
-            TextField(
+            _buildTextField(
               controller: _universityController,
-              decoration: const InputDecoration(
-                labelText: 'Universitas',
-                hintText: 'Contoh: Universitas Indonesia',
-              ),
+              label: 'Universitas',
+              hint: 'Contoh: Universitas Indonesia',
+              isDark: isDark,
             ),
             const SizedBox(height: 12),
-            TextField(
+            _buildTextField(
               controller: _emailController,
+              label: 'Email',
+              hint: 'nama@email.com',
+              isDark: isDark,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                hintText: 'nama@email.com',
-              ),
             ),
             const SizedBox(height: 12),
-            TextField(
+            _buildTextField(
               controller: _phoneController,
+              label: 'Nomor telepon',
+              hint: '+62...',
+              isDark: isDark,
               keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Nomor telepon',
-                hintText: '+62...',
-              ),
             ),
             const SizedBox(height: 12),
-            TextField(
+            _buildTextField(
               controller: _headlineController,
-              decoration: const InputDecoration(
-                labelText: 'Headline',
-                hintText: 'Contoh: Mahasiswa Akuntansi',
-              ),
+              label: 'Headline',
+              hint: 'Contoh: Mahasiswa Akuntansi',
+              isDark: isDark,
             ),
             const SizedBox(height: 12),
-            TextField(
+            _buildTextField(
               controller: _cityController,
-              decoration: const InputDecoration(
-                labelText: 'Kota / Domisili',
-                hintText: 'Contoh: Jakarta',
-              ),
+              label: 'Kota / Domisili',
+              hint: 'Contoh: Jakarta',
+              isDark: isDark,
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    required bool isDark,
+    TextInputType? keyboardType,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      textCapitalization: textCapitalization,
+      style: TextStyle(
+        color: isDark ? Colors.white : Colors.black,
+      ),
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        labelStyle: TextStyle(
+          color: isDark ? Colors.grey[400] : Colors.grey[600],
+        ),
+        hintStyle: TextStyle(
+          color: isDark ? Colors.grey[600] : Colors.grey[400],
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(
+            color: Color(0xFFE89B8E),
+            width: 2,
+          ),
+        ),
+        filled: true,
+        fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.grey[50],
       ),
     );
   }
