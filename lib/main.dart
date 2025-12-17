@@ -65,8 +65,31 @@ class MyApp extends StatelessWidget {
               ? ThemeMode.dark
               : ThemeMode.light,
 
-          home: const WelcomePage(),
+          // --- LOGIKA LOGIN DISINI ---
+          home: StreamBuilder<AuthState>(
+            stream: supabase.auth.onAuthStateChange,
+            builder: (context, snapshot) {
+              // 1. Tampilkan loading jika masih inisialisasi koneksi
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
 
+              // 2. Cek apakah ada session user
+              final session = snapshot.data?.session;
+
+              if (session != null) {
+                // User sudah login -> Masuk ke Navbar (Main App)
+                return const Navbar();
+              } else {
+                // User belum login -> Masuk ke WelcomePage
+                return const WelcomePage();
+              }
+            },
+          ),
+
+          // ---------------------------
           onGenerateRoute: (settings) {
             Widget buildRoute(Widget page) {
               return page;
