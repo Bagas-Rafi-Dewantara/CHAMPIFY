@@ -24,13 +24,13 @@ class WelcomePage extends StatelessWidget {
                     ),
                   ],
                 ),
-                // ✅ Spacing lebih kecil biar bintang lebih ke atas
+               
                 const SizedBox(height: 100),
                 Image.asset(
                   'assets/images/starsignup.png',
                   height: 250,
                 ),
-                // ✅ Spacing lebih kecil antara bintang dan text
+                
                 const SizedBox(height: 50),
                 const Text(
                   'Hi, fellas',

@@ -877,6 +877,17 @@ Widget _buildCompetitionCarousel(bool isDark) {
       );
     }
 
+    // 2. Tampilkan pesan jika data kosong
+    if (_competitionList.isEmpty) {
+      return const SizedBox(
+        height: 100,
+        child: Center(
+          child: Text("Belum ada kompetisi yang sedang berlangsung."),
+        ),
+      );
+    }
+
+    // 3. Tampilkan Carousel dengan data dinamis
     return SizedBox(
       height: 320,
       child: GestureDetector(

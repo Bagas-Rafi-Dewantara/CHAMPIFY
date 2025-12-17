@@ -14,6 +14,7 @@ class CoursePage extends StatefulWidget {
 }
 
 class _CoursePageState extends State<CoursePage> {
+  // Tetap menggunakan boolean karena tampilan Anda saat ini hanya 2 tab
   bool isAvailableSelected = true;
   List<Map<String, dynamic>> availableCourseList = [];
   List<Map<String, dynamic>> myCourseList = [];
