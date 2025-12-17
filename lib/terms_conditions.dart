@@ -1,23 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../theme_provider.dart';
 
 class TermsConditionsPage extends StatelessWidget {
-  const TermsConditionsPage({Key? key}) : super(key: key);
+  const TermsConditionsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // 1. Ambil state Dark Mode
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+
+    // 2. Tentukan Warna
+    final backgroundColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
+    final surfaceColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final primaryText = isDark ? Colors.white : Colors.black;
+    final secondaryText = isDark ? Colors.grey[400] : Colors.black87;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: surfaceColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: primaryText),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Syarat & Ketentuan',
           style: TextStyle(
-            color: Colors.black,
+            color: primaryText,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -34,7 +45,7 @@ class TermsConditionsPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE89B8E).withOpacity(0.1),
+                  color: const Color(0xFFE89B8E).withOpacity(isDark ? 0.2 : 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: const Color(0xFFE89B8E).withOpacity(0.3),
@@ -42,13 +53,13 @@ class TermsConditionsPage extends StatelessWidget {
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
-                    Icon(
+                  children: [
+                    const Icon(
                       Icons.description_outlined,
                       color: Color(0xFFE89B8E),
                       size: 24,
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,15 +69,15 @@ class TermsConditionsPage extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                              color: isDark ? Colors.white : Colors.black87,
                             ),
                           ),
-                          SizedBox(height: 4),
+                          const SizedBox(height: 4),
                           Text(
                             'Harap baca dengan saksama sebelum menggunakan layanan CHAMPIFY',
                             style: TextStyle(
                               fontSize: 13,
-                              color: Colors.black87,
+                              color: isDark ? Colors.white70 : Colors.black87,
                             ),
                           ),
                         ],
@@ -85,6 +96,7 @@ class TermsConditionsPage extends StatelessWidget {
                 content:
                     'Selamat datang di CHAMPIFY. Dengan mengakses atau menggunakan aplikasi CHAMPIFY, Anda setuju untuk terikat dengan Syarat dan Ketentuan ini. Jika Anda tidak setuju dengan salah satu bagian dari ketentuan ini, mohon untuk tidak menggunakan layanan kami.\n\n'
                     'CHAMPIFY adalah platform pembelajaran yang menyediakan kursus online, kompetisi edukatif, dan layanan mentoring untuk membantu pengguna mengembangkan keterampilan dan pengetahuan mereka.',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -100,6 +112,7 @@ class TermsConditionsPage extends StatelessWidget {
                     '• Memberikan informasi yang akurat dan lengkap\n'
                     '• Memperbarui informasi akun Anda secara berkala\n\n'
                     'Anda harus segera memberi tahu kami jika terjadi penggunaan tidak sah terhadap akun Anda.',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -116,6 +129,7 @@ class TermsConditionsPage extends StatelessWidget {
                     '• Menggunakan bot atau alat otomatis tanpa izin\n'
                     '• Berbagi akun dengan pihak lain\n'
                     '• Menyalin atau mendistribusikan materi tanpa izin',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -130,6 +144,7 @@ class TermsConditionsPage extends StatelessWidget {
                     '• Merekam, mengunduh, atau mendistribusikan ulang konten\n'
                     '• Menggunakan konten untuk tujuan komersial\n'
                     '• Memodifikasi atau membuat karya turunan',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -147,6 +162,7 @@ class TermsConditionsPage extends StatelessWidget {
                     '• Dalam 7 hari setelah pembelian jika belum mengakses >20% materi\n'
                     '• Jika terjadi kesalahan teknis dari pihak kami\n'
                     '• Sesuai kebijakan pengembalian dana yang berlaku',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -162,6 +178,7 @@ class TermsConditionsPage extends StatelessWidget {
                     '• Keputusan juri bersifat final\n'
                     '• Hadiah akan diberikan sesuai ketentuan kompetisi\n'
                     '• CHAMPIFY berhak mendiskualifikasi peserta yang melanggar aturan',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -177,6 +194,7 @@ class TermsConditionsPage extends StatelessWidget {
                     '• CHAMPIFY tidak bertanggung jawab atas kualitas saran mentor\n'
                     '• Anda harus bersikap profesional dan hormat\n'
                     '• Pelanggaran dapat mengakibatkan penangguhan layanan',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -192,6 +210,7 @@ class TermsConditionsPage extends StatelessWidget {
                     '• Kode sumber dan teknologi\n'
                     '• Konten kursus dan materi pembelajaran\n\n'
                     'adalah milik CHAMPIFY atau pemberi lisensi kami dan dilindungi oleh hukum kekayaan intelektual yang berlaku.',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -203,6 +222,7 @@ class TermsConditionsPage extends StatelessWidget {
                 content:
                     'Penggunaan data pribadi Anda diatur oleh Kebijakan Privasi kami. Dengan menggunakan layanan kami, Anda setuju bahwa kami dapat mengumpulkan, menggunakan, dan membagikan informasi Anda sesuai dengan Kebijakan Privasi.\n\n'
                     'Kami berkomitmen untuk melindungi privasi Anda dan menggunakan data Anda hanya untuk meningkatkan layanan kami.',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -218,6 +238,7 @@ class TermsConditionsPage extends StatelessWidget {
                     '• Kami diminta oleh penegak hukum\n'
                     '• Untuk melindungi keamanan platform dan pengguna lain\n\n'
                     'Anda dapat menghentikan akun Anda kapan saja melalui pengaturan akun.',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -234,6 +255,7 @@ class TermsConditionsPage extends StatelessWidget {
                     '• Konten atau tindakan pengguna lain\n'
                     '• Keputusan yang dibuat berdasarkan konten kami\n\n'
                     'Layanan disediakan "sebagaimana adanya" tanpa jaminan apa pun.',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -245,6 +267,7 @@ class TermsConditionsPage extends StatelessWidget {
                 content:
                     'Kami berhak untuk mengubah Syarat dan Ketentuan ini kapan saja. Perubahan akan berlaku segera setelah diposting di aplikasi.\n\n'
                     'Kami akan memberitahu Anda tentang perubahan signifikan melalui email atau notifikasi dalam aplikasi. Penggunaan berkelanjutan Anda terhadap layanan setelah perubahan berarti Anda menerima ketentuan yang diperbarui.',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -256,6 +279,7 @@ class TermsConditionsPage extends StatelessWidget {
                 content:
                     'Syarat dan Ketentuan ini diatur oleh dan ditafsirkan sesuai dengan hukum Republik Indonesia. Setiap perselisihan akan diselesaikan melalui pengadilan yang berwenang di Jakarta.\n\n'
                     'Sebelum mengambil tindakan hukum, para pihak setuju untuk berupaya menyelesaikan perselisihan melalui negosiasi atau mediasi.',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 20),
@@ -270,6 +294,7 @@ class TermsConditionsPage extends StatelessWidget {
                     '• Telepon: +62 21 1234 5678\n'
                     '• Alamat: Jl. Pendidikan No. 123, Jakarta 12345\n\n'
                     'Tim dukungan kami tersedia Senin-Jumat, 09:00-17:00 WIB.',
+                isDark: isDark,
               ),
 
               const SizedBox(height: 30),
@@ -278,32 +303,35 @@ class TermsConditionsPage extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: const Color(0xFFE89B8E).withOpacity(0.3),
                   ),
                 ),
                 child: Column(
-                  children: const [
-                    Icon(
+                  children: [
+                    const Icon(
                       Icons.verified_user,
                       color: Color(0xFFE89B8E),
                       size: 48,
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     Text(
                       'Dengan menggunakan CHAMPIFY, Anda menyatakan telah membaca, memahami, dan menyetujui Syarat & Ketentuan ini.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 14, color: Colors.black87),
+                      style: TextStyle(
+                        fontSize: 14, 
+                        color: isDark ? Colors.white : Colors.black87
+                      ),
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     Text(
                       'Terima kasih telah mempercayai CHAMPIFY sebagai partner pembelajaran Anda!',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey,
+                        color: isDark ? Colors.grey[400] : Colors.grey,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -323,11 +351,12 @@ class TermsConditionsPage extends StatelessWidget {
     required String number,
     required String title,
     required String content,
+    required bool isDark,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -358,10 +387,10 @@ class TermsConditionsPage extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+                    color: isDark ? Colors.white : Colors.black87,
                   ),
                 ),
               ),
@@ -374,7 +403,7 @@ class TermsConditionsPage extends StatelessWidget {
               content,
               style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey.shade700,
+                color: isDark ? Colors.grey[300] : Colors.grey.shade700,
                 height: 1.6,
               ),
             ),

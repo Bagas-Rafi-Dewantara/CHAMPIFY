@@ -649,19 +649,24 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
       );
     }
   }
+
+  // ✅ FIX: Tab item dengan animasi INSTANT (duration 0ms) & styling lebih kontras
   Widget _buildTabItem(String title, int index, bool isDark) {
     bool isActive = selectedTabIndex == index;
     return Expanded(
       child: GestureDetector(
         onTap: () => _onTabChanged(index),
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 0), 
+          duration: const Duration(milliseconds: 0), // ✅ INSTANT, no animation lag
           padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(            
+          decoration: BoxDecoration(
+            // ✅ Active: Salmon pink background
+            // ✅ Inactive: Transparent (showing parent gray background)
             color: isActive 
                 ? const Color(0xFFFF9494)
                 : Colors.transparent,
-            borderRadius: BorderRadius.circular(30),          
+            borderRadius: BorderRadius.circular(30),
+            // ✅ Shadow hanya untuk active tab
             boxShadow: isActive
                 ? [
                     BoxShadow(
@@ -678,6 +683,8 @@ class _MyCoursePlaylistPageState extends State<MyCoursePlaylistPage> {
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 13,
+                // ✅ Active: White text
+                // ✅ Inactive: Gray text (lebih gelap untuk light mode)
                 color: isActive 
                     ? Colors.white
                     : (isDark ? Colors.grey[500] : Colors.grey[600]),

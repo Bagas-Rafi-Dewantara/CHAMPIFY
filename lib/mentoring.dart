@@ -1,32 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'theme_provider.dart';
 
 class ZoomMeetingScreen extends StatelessWidget {
-  const ZoomMeetingScreen({Key? key}) : super(key: key);
+  const ZoomMeetingScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFF5E6D3),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5E6D3),
       appBar: AppBar(
-        backgroundColor: const Color(0xFFF5E6D3),
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF5E6D3),
         elevation: 0,
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              border: Border.all(color: Colors.black54, width: 1.5),
+              border: Border.all(
+                color: isDark ? Colors.grey.shade700 : Colors.black54, 
+                width: 1.5,
+              ),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.arrow_back, color: Colors.black),
+            child: Icon(
+              Icons.arrow_back, 
+              color: isDark ? Colors.white : Colors.black,
+            ),
           ),
           onPressed: () {
-            Navigator.pop(context); // Ini yang penting!
+            Navigator.pop(context);
           },
         ),
-        title: const Text(
+        title: Text(
           'Zoom Meeting',
           style: TextStyle(
-            color: Colors.black,
+            color: isDark ? Colors.white : Colors.black,
             fontSize: 24,
             fontWeight: FontWeight.bold,
           ),
@@ -39,11 +49,11 @@ class ZoomMeetingScreen extends StatelessWidget {
           children: [
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -96,12 +106,12 @@ class ZoomMeetingScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Discuss with Mentor',
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                            color: isDark ? Colors.white : Colors.black87,
                           ),
                         ),
                         const SizedBox(height: 20),
@@ -114,7 +124,9 @@ class ZoomMeetingScreen extends StatelessWidget {
                                   vertical: 12,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFFFFF9E6),
+                                  color: isDark 
+                                      ? const Color(0xFF3A3500)
+                                      : const Color(0xFFFFF9E6),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                                 child: Row(
@@ -169,7 +181,9 @@ class ZoomMeetingScreen extends StatelessWidget {
                             vertical: 12,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFFFF9E6),
+                            color: isDark 
+                                ? const Color(0xFF3A3500)
+                                : const Color(0xFFFFF9E6),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
