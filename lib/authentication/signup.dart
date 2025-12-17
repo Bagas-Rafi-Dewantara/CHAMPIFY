@@ -25,63 +25,63 @@ class _SignUpFormPageState extends State<SignUpFormPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFFFF8DC), // Warna latar belakang
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Back Button di kanan atas
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: const Color(0xFFC4B0A0), // Border warna krem
-                      width: 2,
-                    ),
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.chevron_left, color: Color(0xFFE8A87C)), // Icon warna lebih gelap
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ),
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 20),
-                    // Tulisan "Please complete the field below" dalam dua baris
-                    const Text(
-                      'Please complete \nthe field below',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
-                        color: Colors.black87,
-                        height: 1.5, // Menambah jarak di antara baris teks
+    return Theme(
+      data: ThemeData.light(),
+      child: Scaffold(
+        backgroundColor: const Color(0xFFFFF8DC),
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: const Color(0xFFC4B0A0),
+                        width: 2,
                       ),
                     ),
-                    const SizedBox(height: 120), // Tambahkan jarak agar field turun ke bawah
-                    _buildField(_fullnameController, 'Fullname'),
-                    const SizedBox(height: 24), // Tambahkan jarak antar field
-                    _buildField(_majorController, 'Major'),
-                    const SizedBox(height: 24), // Tambahkan jarak antar field
-                    _buildField(_universityController, 'University'),
-                    const SizedBox(height: 24), // Tambahkan jarak antar field
-                    _buildField(_numberController, 'Number', keyboardType: TextInputType.phone),
-                    const SizedBox(height: 80), // Tambahkan jarak sebelum tombol submit
-                  ],
+                    child: IconButton(
+                      icon: const Icon(Icons.chevron_left, color: Color(0xFFE8A87C)),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            // Tombol Submit di bawah
-            _buildSubmitButton(context),
-          ],
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Please complete \nthe field below',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 24,
+                          color: Colors.black87,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 120),
+                      _buildField(_fullnameController, 'Fullname'),
+                      const SizedBox(height: 24),
+                      _buildField(_majorController, 'Major'),
+                      const SizedBox(height: 24),
+                      _buildField(_universityController, 'University'),
+                      const SizedBox(height: 24),
+                      _buildField(_numberController, 'Number', keyboardType: TextInputType.phone),
+                      const SizedBox(height: 80),
+                    ],
+                  ),
+                ),
+              ),
+              _buildSubmitButton(context),
+            ],
+          ),
         ),
       ),
     );
@@ -99,13 +99,13 @@ class _SignUpFormPageState extends State<SignUpFormPage> {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: const TextStyle(
-          color: Color(0xFFB8B8B8), // Warna placeholder abu-abu terang
+          color: Color(0xFFB8B8B8),
         ),
-        prefixIcon: _getIconForField(hint), // Icon di sebelah kiri
+        prefixIcon: _getIconForField(hint),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20), // Rounded corner field
+          borderRadius: BorderRadius.circular(20),
           borderSide: const BorderSide(
-            color: Color(0xFFC4B0A0), // Border warna krem
+            color: Color(0xFFC4B0A0),
             width: 2,
           ),
         ),
@@ -116,29 +116,34 @@ class _SignUpFormPageState extends State<SignUpFormPage> {
             width: 2,
           ),
         ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(
+            color: Color(0xFFE8A87C), // Orange theme color
+            width: 2,
+          ),
+        ),
         filled: true,
-        fillColor: const Color(0xFFFFFFFF).withOpacity(0.3), // Warna background field
+        fillColor: const Color(0xFFFFFFFF).withOpacity(0.3),
       ),
     );
   }
 
-  /// Icon untuk setiap text field berdasarkan hint
   Widget _getIconForField(String hint) {
     switch (hint) {
       case 'Fullname':
-        return const Icon(Icons.person, color: Color(0xFF9B9B9B)); // Icon person
+        return const Icon(Icons.person, color: Color(0xFF9B9B9B));
       case 'Major':
-        return const Icon(Icons.school, color: Color(0xFF9B9B9B)); // Icon school
+        return const Icon(Icons.school, color: Color(0xFF9B9B9B));
       case 'University':
-        return const Icon(Icons.business, color: Color(0xFF9B9B9B)); // Icon business
+        return const Icon(Icons.business, color: Color(0xFF9B9B9B));
       case 'Number':
-        return const Icon(Icons.phone, color: Color(0xFF9B9B9B)); // Icon phone
+        return const Icon(Icons.phone, color: Color(0xFF9B9B9B));
       default:
         return const Icon(Icons.person, color: Color(0xFF9B9B9B));
     }
   }
 
-  /// Tombol Submit di kanan bawah
   Widget _buildSubmitButton(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(right: 30, bottom: 40),
@@ -150,14 +155,12 @@ class _SignUpFormPageState extends State<SignUpFormPage> {
             borderRadius: BorderRadius.circular(16),
           ),
           child: IconButton(
-            icon: const Icon(Icons.arrow_forward, color: Color(0xFF9B7765)), // Arrow warna coklat gelap
+            icon: const Icon(Icons.arrow_forward, color: Color(0xFF9B7765)),
             onPressed: () {
-              // Validasi apakah semua field terisi
               if (_fullnameController.text.isNotEmpty &&
                   _majorController.text.isNotEmpty &&
                   _universityController.text.isNotEmpty &&
                   _numberController.text.isNotEmpty) {
-                // Navigasi ke halaman Signup2 jika semua field valid
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -170,7 +173,6 @@ class _SignUpFormPageState extends State<SignUpFormPage> {
                   ),
                 );
               } else {
-                // Tampilkan pesan jika ada field kosong
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Please fill all fields')),
                 );

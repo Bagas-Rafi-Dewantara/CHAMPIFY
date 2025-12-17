@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart'; 
 import 'dart:async';
-import '../main.dart'; // <--- PENTING: Untuk akses variabel 'supabase'
+import '../main.dart'; 
 import 'mentoring.dart';
 import 'course/detail_course.dart';
 import 'competition.dart' hide supabase;
 import 'course/courses.dart';
 import 'profile_page.dart';
-// import 'course/mycourse_quiz.dart'; <--- SUDAH DIHAPUS
+import 'theme_provider.dart'; 
+
 
 class HomePage extends StatefulWidget {
-  const HomePage({Key? key}) : super(key: key);
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -19,38 +21,32 @@ class _HomePageState extends State<HomePage> {
   final PageController _pageController = PageController(viewportFraction: 0.85);
   int _currentPage = 0;
   late Timer _timer;
+  bool _userIsInteracting = false;
 
-  // --- STATE UNTUK DATA COURSE ---
   List<Map<String, dynamic>> _courseList = [];
   bool _isLoadingCourses = true;
 
-  // --- STATE UNTUK DATA COMPETITION BARU ---
   List<Map<String, dynamic>> _competitionList = [];
   bool _isLoadingCompetitions = true;
 
-  // --- STATE UNTUK DATA MEETING ---
   Map<String, dynamic>? _upcomingMeeting;
   bool _isLoadingMeeting = true;
 
-  // --- STATE UNTUK DATA PENGGUNA (HEADER) ---
-  String _userName = 'Pengguna'; // Default name
+  String _userName = 'Pengguna';
   bool _isUserLoading = true;
   String? _avatarUrl;
 
   @override
   void initState() {
     super.initState();
-    // Panggil fungsi fetch data saat halaman dibuka
     _fetchHomeCourses();
     _fetchHomeCompetitions();
     _fetchUpcomingMeeting();
     _fetchUserData();
 
-    // Timer untuk Carousel
     _timer = Timer.periodic(const Duration(seconds: 3), (Timer timer) {
-      // Menggunakan panjang list kompetisi yang dinamis
       int totalItems = _competitionList.length;
-      if (totalItems > 0) {
+      if (totalItems > 0 && !_userIsInteracting) {
         if (_currentPage < totalItems - 1) {
           _currentPage++;
         } else {
@@ -67,7 +63,6 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
-  // --- UTILITY FUNCTION (BISA DIPANGGIL DARI DALAM CLASS) ---
   String _formatDate(String dateString) {
     try {
       final date = DateTime.parse(dateString);
@@ -92,11 +87,8 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // --- LOGIKA AMBIL DATA DARI SUPABASE ---
   Future<void> _fetchHomeCourses() async {
     try {
-      // Ambil data course (limit 5 aja buat homepage biar ringan)
-      // Include mentor, playlist, dan rating seperti di courses.dart
       final data = await supabase
           .from('course')
           .select('*, mentor(*), playlist(*), rating(*, pengguna(*))')
@@ -116,93 +108,73 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // --- LOGIKA BARU: AMBIL DATA COMPETITION DARI SUPABASE (PERBAIKAN FINAL) ---
-  Future<void> _fetchHomeCompetitions() async {
-    try {
-      // PERBAIKAN: Menggunakan .or() untuk menggantikan .in_()
-      // Ini memfilter data di mana status SAMA DENGAN 'ongoing' ATAU 'almost over'.
-      // Pastikan nilai status di database Anda adalah TEKS lowercase: 'ongoing' dan 'almost over'
-      final allActiveData = await supabase
-          .from('competition')
-          .select('*')
-          .or(
-            'status.eq.ongoing,status.eq.almost over',
-          ) // <--- PERBAIKAN UTAMA DI SINI
-          .order('end_date', ascending: true)
-          .limit(5);
+Future<void> _fetchHomeCompetitions() async {
+  try {
+    // Ambil 5 kompetisi terbaru yang statusnya ongoing atau almost over
+    final allActiveData = await supabase
+        .from('competition')
+        .select('*')
+        .or('status.eq.ongoing,status.eq.almost over')
+        .order('end_date', ascending: true)
+        .limit(5); // Limit 5 untuk recommended
 
-      // Filter untuk memisahkan 2 Almost Over dan 3 On Going (berdasarkan urutan tanggal)
-      final List<Map<String, dynamic>> combinedData =
-          List<Map<String, dynamic>>.from(allActiveData);
+    final List<Map<String, dynamic>> combinedData =
+        List<Map<String, dynamic>>.from(allActiveData);
 
-      // Logika untuk menentukan status tampilan
-      if (mounted) {
-        setState(() {
-          _competitionList = combinedData.map((comp) {
-            final String dbStatus = comp['status'].toString().toLowerCase();
-            // Cek kolom image_url dulu, jika kosong, pakai kolom poster
-            final String imageUrl = comp['image_url'] ?? comp['poster'] ?? '';
+    if (mounted) {
+      setState(() {
+        _competitionList = combinedData.map((comp) {
+          final String dbStatus = comp['status'].toString().toLowerCase();
+          final String imageUrl = comp['image_url'] ?? comp['poster'] ?? '';
 
-            String displayStatus;
-            if (dbStatus == 'almost over') {
-              displayStatus = 'Almost Over';
-            } else if (dbStatus == 'ongoing') {
-              displayStatus = 'On Going';
-            } else {
-              // Default jika ada status lain yang terambil
-              displayStatus = 'On Going';
-            }
-
-            return {
-              ...comp,
-              'image_url_final':
-                  imageUrl, // Tambahkan kunci untuk gambar yang pasti ada
-              'display_status': displayStatus,
-            };
-          }).toList();
-
-          _isLoadingCompetitions = false;
-
-          // Atur ulang PageController jika list tidak kosong
-          if (_competitionList.isNotEmpty) {
-            _currentPage = 0; // Reset ke halaman pertama
+          String displayStatus;
+          if (dbStatus == 'almost over') {
+            displayStatus = 'Almost Over';
+          } else if (dbStatus == 'ongoing') {
+            displayStatus = 'On Going';
+          } else {
+            displayStatus = 'On Going';
           }
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching home competitions: $e');
-      if (mounted) {
-        setState(() => _isLoadingCompetitions = false);
-      }
+
+          return {
+            ...comp,
+            'image_url_final': imageUrl,
+            'display_status': displayStatus,
+          };
+        }).toList();
+
+        _isLoadingCompetitions = false;
+
+        if (_competitionList.isNotEmpty) {
+          _currentPage = 0;
+        }
+      });
+    }
+  } catch (e) {
+    debugPrint('Error fetching home competitions: $e');
+    if (mounted) {
+      setState(() => _isLoadingCompetitions = false);
     }
   }
+}
 
-  // --- LOGIKA PERBAIKAN FINAL (Mengambil Semua Data lalu Filter di Flutter) ---
   Future<void> _fetchUpcomingMeeting() async {
     try {
-      // Ambil data yang tersisa (termasuk yang 2026) tanpa filter tanggal yang ketat.
-      // Kita ambil semua data dan filter di sisi Flutter
       final data = await supabase
           .from('zoom')
           .select('*, mentor(*)')
-          .limit(
-            10,
-          ); // Ambil lebih banyak data (atau semua jika tidak terlalu banyak)
+          .limit(10);
 
-      // --- TAMBAHKAN DEBUGGING INI ---
       debugPrint('Supabase data received: $data');
 
       if (mounted) {
         setState(() {
           if (data.isNotEmpty) {
-            // 1. Filter: Hanya ambil meeting yang tanggalnya di masa depan atau hari ini
             final List<Map<String, dynamic>> futureMeetings = data.where((m) {
               try {
-                // Pastikan kolom 'date' tidak null
                 if (m['date'] == null) return false;
 
                 final meetingDate = DateTime.parse(m['date']);
-                // Gunakan isAfter(yesterday) untuk menyertakan hari ini (00:00:00)
                 final yesterday = DateTime.now().subtract(
                   const Duration(hours: 24),
                 );
@@ -214,10 +186,8 @@ class _HomePageState extends State<HomePage> {
               }
             }).toList();
 
-            // 2. Sort: Urutkan berdasarkan tanggal terdekat
             if (futureMeetings.isNotEmpty) {
               futureMeetings.sort((a, b) {
-                // Perbandingan tanggal wajib dilakukan di sini
                 final dateA = DateTime.parse(a['date']);
                 final dateB = DateTime.parse(b['date']);
                 return dateA.compareTo(dateB);
@@ -234,7 +204,6 @@ class _HomePageState extends State<HomePage> {
         });
       }
     } catch (e) {
-      // Jika masih ada error di sini, kemungkinan masalah koneksi atau RLS
       debugPrint('Critical Error fetching upcoming meeting: $e');
       if (mounted) {
         setState(() => _isLoadingMeeting = false);
@@ -242,15 +211,11 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // --- LOGIKA BARU: AMBIL NAMA PENGGUNA DARI SUPABASE ---
   Future<void> _fetchUserData() async {
-    // *ASUMSI: Anda sudah memiliki ID pengguna yang sedang login*
-    // Contoh jika menggunakan Supabase Auth:
     final user = supabase.auth.currentUser;
     final currentUserId = user?.id;
 
     if (user != null) {
-      // Gunakan metadata untuk respon cepat di header
       _userName =
           user.userMetadata?['full_name'] ??
           user.email?.split('@').first ??
@@ -262,22 +227,17 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         setState(() {
           _isUserLoading = false;
-          // Biarkan _userName tetap 'Pengguna' (default) jika belum login
         });
       }
       return;
     }
 
     try {
-      // Ambil data dari tabel 'pengguna' berdasarkan ID pengguna yang sedang login
       final data = await supabase
           .from('pengguna')
-          .select('full_name') // Hanya ambil kolom full_name
-          .eq(
-            'id_pengguna',
-            currentUserId,
-          ) // Asumsi kolom ID di tabel 'pengguna' bernama 'id_pengguna'
-          .single(); // Ambil hanya satu baris
+          .select('full_name')
+          .eq('id_pengguna', currentUserId)
+          .single();
 
       if (mounted) {
         setState(() {
@@ -306,8 +266,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // GET DARK MODE STATE
+    final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
+    
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.only(bottom: 100),
@@ -316,39 +279,46 @@ class _HomePageState extends State<HomePage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 1. Header
-                _buildHeader(),
+                _buildHeader(isDark),
                 const SizedBox(height: 30),
 
-                // 2. Upcoming Meeting
-                const Text(
+                Text(
                   'Upcoming Meeting',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20, 
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                 ),
                 const SizedBox(height: 16),
-                _buildUpcomingMeeting(),
+                _buildUpcomingMeeting(isDark),
                 const SizedBox(height: 30),
 
-                // 3. My Feature
-                _buildFeatureSection(),
+                _buildFeatureSection(isDark),
                 const SizedBox(height: 30),
 
-                // 4. Courses Preview (DATA ASLI)
-                const Text(
+                Text(
                   'Courses',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20, 
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                 ),
                 const SizedBox(height: 16),
-                _buildCoursesList(), // <--- List ini sekarang dinamis
+                _buildCoursesList(isDark),
                 const SizedBox(height: 30),
 
-                // 5. Competition Carousel
-                const Text(
+                Text(
                   'Recommended Competition',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: 20, 
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
                 ),
                 const SizedBox(height: 16),
-                _buildCompetitionCarousel(),
+                _buildCompetitionCarousel(isDark),
               ],
             ),
           ),
@@ -357,73 +327,103 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ========================================
-  // HEADER SECTION (SUDAH DINAMIS)
-  // ========================================
-
-  Widget _buildHeader() {
-    // Tampilkan loading sebentar jika data pengguna sedang diambil
-    if (_isUserLoading) {
-      return const SizedBox(
-        height: 60,
-        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-      );
-    }
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text('Hello, ', style: TextStyle(fontSize: 24)),
-                Text(
-                  // Menggunakan state _userName yang sudah dimuat dari DB
-                  _userName,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            const Text(
-              "Let's be enthusiastic to achieve!",
-              style: TextStyle(fontSize: 14, color: Colors.grey),
-            ),
-          ],
-        ),
-        InkWell(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const ProfilePage()),
-            );
-          },
-          borderRadius: BorderRadius.circular(32),
-          child: CircleAvatar(
-            radius: 28,
-            backgroundColor: Colors.grey.shade300,
-            backgroundImage: _avatarUrl != null
-                ? NetworkImage(_avatarUrl!)
-                : null,
-            child: _avatarUrl == null
-                ? const Icon(Icons.person, color: Colors.white)
-                : null,
-          ),
-        ),
-      ],
+  Widget _buildHeader(bool isDark) {
+  if (_isUserLoading) {
+    return const SizedBox(
+      height: 60,
+      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
     );
   }
 
-  // ========================================
-  // UPCOMING MEETING SECTION
-  // ========================================
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Hello, ', 
+                style: TextStyle(
+                  fontSize: 24,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+              Text(
+                _userName,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            "Let's be enthusiastic to achieve!",
+            style: TextStyle(
+              fontSize: 14, 
+              color: isDark ? Colors.grey[400] : Colors.grey,
+            ),
+          ),
+        ],
+      ),
+      // ✅ INI JUGA PERLU DIGANTI (InkWell + CircleAvatar)
+      InkWell(
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ProfilePage()),
+          );
+          await supabase.auth.refreshSession();
+          _fetchUserData();
+        },
+        borderRadius: BorderRadius.circular(32),
+        child: CircleAvatar(
+          radius: 28,
+          backgroundColor: isDark ? Colors.grey[800] : Colors.grey.shade300,
+          child: _avatarUrl != null && _avatarUrl!.isNotEmpty
+              ? ClipOval(
+                  child: Image.network(
+                    _avatarUrl!,
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.person, 
+                        color: Colors.white,
+                        size: 28,
+                      );
+                    },
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: CircularProgressIndicator(
+                          value: loadingProgress.expectedTotalBytes != null
+                              ? loadingProgress.cumulativeBytesLoaded /
+                                  loadingProgress.expectedTotalBytes!
+                              : null,
+                          strokeWidth: 2,
+                        ),
+                      );
+                    },
+                  ),
+                )
+              : const Icon(
+                  Icons.person, 
+                  color: Colors.white,
+                  size: 28,
+                ),
+        ),
+      ),
+    ],
+  );
+}
 
-  Widget _buildUpcomingMeeting() {
+  Widget _buildUpcomingMeeting(bool isDark) {
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -434,9 +434,11 @@ class _HomePageState extends State<HomePage> {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(
+            color: isDark ? Colors.grey.shade800 : Colors.grey.shade300,
+          ),
         ),
         child: Row(
           children: [
@@ -453,21 +455,31 @@ class _HomePageState extends State<HomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Discuss with mentor',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      fontSize: 14, 
+                      fontWeight: FontWeight.w600,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Wrap(
                     spacing: 8,
-                    children: const [
+                    children: [
                       Text(
                         '30 Juli 2024',
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                        style: TextStyle(
+                          fontSize: 11, 
+                          color: isDark ? Colors.grey[400] : Colors.grey,
+                        ),
                       ),
                       Text(
                         '19.00-21.00 WIB',
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                        style: TextStyle(
+                          fontSize: 11, 
+                          color: isDark ? Colors.grey[400] : Colors.grey,
+                        ),
                       ),
                     ],
                   ),
@@ -509,19 +521,19 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ========================================
-  // MY FEATURE SECTION
-  // ========================================
-
-  Widget _buildFeatureSection() {
+  Widget _buildFeatureSection(bool isDark) {
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
+            Text(
               'My Feature',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                fontSize: 20, 
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black,
+              ),
             ),
             TextButton(
               onPressed: () {},
@@ -564,7 +576,6 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
-            // --- BAGIAN QUIZ SUDAH DIHAPUS ---
             _buildFeatureItem(
               Icons.emoji_events,
               'Competition',
@@ -613,12 +624,7 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ========================================
-  // COURSES SECTION (UPDATED)
-  // ========================================
-
-  Widget _buildCoursesList() {
-    // 1. Tampilkan Loading jika data belum siap
+  Widget _buildCoursesList(bool isDark) {
     if (_isLoadingCourses) {
       return const SizedBox(
         height: 320,
@@ -626,17 +632,22 @@ class _HomePageState extends State<HomePage> {
       );
     }
 
-    // 2. Tampilkan pesan jika data kosong
     if (_courseList.isEmpty) {
-      return const SizedBox(
+      return SizedBox(
         height: 100,
-        child: Center(child: Text("Belum ada course tersedia.")),
+        child: Center(
+          child: Text(
+            "Belum ada course tersedia.",
+            style: TextStyle(
+              color: isDark ? Colors.grey[400] : Colors.grey,
+            ),
+          ),
+        ),
       );
     }
 
-    // 3. Tampilkan List Data Asli
     return SizedBox(
-      height: 320, // Tinggi container disesuaikan
+      height: 320,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         physics: const BouncingScrollPhysics(),
@@ -645,23 +656,21 @@ class _HomePageState extends State<HomePage> {
         itemBuilder: (context, index) {
           final course = _courseList[index];
 
-          // Kita kirim seluruh Map 'course' ke widget card
           return Padding(
             padding: EdgeInsets.only(left: index == 0 ? 0 : 8, right: 8),
-            child: _buildCourseCard(course),
+            child: _buildCourseCard(course, isDark),
           );
         },
       ),
     );
   }
 
-  Widget _buildCourseCard(Map<String, dynamic> courseData) {
-    // Ekstrak data dari Map (JSON Supabase)
+  Widget _buildCourseCard(Map<String, dynamic> courseData, bool isDark) {
     final String title = courseData['nama_course'] ?? 'No Title';
     final String imageUrl = courseData['link_gambar'] ?? '';
     final int lessonsCount = courseData['jumlah_lesson'] ?? 0;
     final String duration = courseData['durasi_course'] ?? '-';
-    // Logic simple untuk ambil rating rata-rata
+    
     final List ratings = courseData['rating'] ?? [];
     String ratingStr = '0.0';
     if (ratings.isNotEmpty) {
@@ -672,7 +681,6 @@ class _HomePageState extends State<HomePage> {
       ratingStr = (total / ratings.length).toStringAsFixed(1);
     }
 
-    // Warna dummy agar UI tetap variatif (karena di DB mungkin belum ada field warna)
     final Color cardColor = const Color(0xFFD8B4E8);
 
     return Material(
@@ -680,10 +688,8 @@ class _HomePageState extends State<HomePage> {
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () {
-          // --- NAVIGASI KE DETAIL DENGAN DATA ASLI ---
           Navigator.of(context).push(
             MaterialPageRoute(
-              // Kirim Data Asli (courseData) ke DetailCoursePage
               builder: (_) => DetailCoursePage(courseData: courseData),
             ),
           );
@@ -691,11 +697,13 @@ class _HomePageState extends State<HomePage> {
         child: Container(
           width: 240,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.shade300,
+                color: isDark 
+                    ? Colors.black.withOpacity(0.3)
+                    : Colors.grey.shade300,
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -704,7 +712,6 @@ class _HomePageState extends State<HomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image with gradient overlay
               Stack(
                 children: [
                   ClipRRect(
@@ -726,7 +733,6 @@ class _HomePageState extends State<HomePage> {
                       },
                     ),
                   ),
-                  // Gradient overlay
                   Container(
                     width: 240,
                     height: 160,
@@ -744,26 +750,26 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   ),
-                  // Heart icon
                   Positioned(
                     top: 12,
                     right: 12,
                     child: Container(
                       padding: const EdgeInsets.all(8),
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
+                      decoration: BoxDecoration(
+                        color: isDark 
+                            ? Colors.grey[800]
+                            : Colors.white,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.favorite_border,
-                        color: Colors.grey,
+                        color: isDark ? Colors.grey[400] : Colors.grey,
                         size: 20,
                       ),
                     ),
                   ),
                 ],
               ),
-              // Card content
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
@@ -773,9 +779,10 @@ class _HomePageState extends State<HomePage> {
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -783,14 +790,13 @@ class _HomePageState extends State<HomePage> {
                       '$lessonsCount lessons',
                       style: TextStyle(
                         fontSize: 13,
-                        color: Colors.grey.shade500,
+                        color: isDark ? Colors.grey[400] : Colors.grey.shade500,
                       ),
                     ),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        // Duration badge
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 12,
@@ -819,7 +825,6 @@ class _HomePageState extends State<HomePage> {
                             ],
                           ),
                         ),
-                        // Rating
                         Row(
                           children: [
                             const Icon(
@@ -830,9 +835,10 @@ class _HomePageState extends State<HomePage> {
                             const SizedBox(width: 4),
                             Text(
                               ratingStr,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
+                                color: isDark ? Colors.white : Colors.black,
                               ),
                             ),
                           ],
@@ -849,16 +855,25 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // ========================================
-  // COMPETITION CAROUSEL
-  // ========================================
-
-  Widget _buildCompetitionCarousel() {
-    // 1. Tampilkan Loading
+Widget _buildCompetitionCarousel(bool isDark) {
     if (_isLoadingCompetitions) {
       return const SizedBox(
         height: 320,
         child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_competitionList.isEmpty) {
+      return SizedBox(
+        height: 100,
+        child: Center(
+          child: Text(
+            "Belum ada kompetisi yang sedang berlangsung.",
+            style: TextStyle(
+              color: isDark ? Colors.grey[400] : Colors.grey,
+            ),
+          ),
+        ),
       );
     }
 
@@ -875,82 +890,119 @@ class _HomePageState extends State<HomePage> {
     // 3. Tampilkan Carousel dengan data dinamis
     return SizedBox(
       height: 320,
-      child: PageView.builder(
-        controller: _pageController,
-        onPageChanged: (p) => setState(() => _currentPage = p),
-        itemCount: _competitionList.length, // <--- Jumlah item dari data DB
-        itemBuilder: (context, index) {
-          final competition = _competitionList[index]; // Ambil data
-          final String imageUrl =
-              competition['image_url'] ??
-              competition['poster'] ??
-              ''; // Ambil link gambar dari kolom DB
-          final String title = competition['title'] ?? 'No Title';
-          final String status =
-              competition['display_status'] ??
-              'Closed'; // Status yang sudah dihitung
-
-          return AnimatedBuilder(
-            animation: _pageController,
-            builder: (context, child) {
-              double value = 1.0;
-              if (_pageController.position.haveDimensions) {
-                value = _pageController.page! - index;
-                value = (1 - (value.abs() * 0.3)).clamp(0.7, 1.0);
-              }
-              return Center(
-                child: SizedBox(
-                  height: Curves.easeInOut.transform(value) * 320,
-                  width: Curves.easeInOut.transform(value) * 280,
-                  child: child,
-                ),
-              );
-            },
-            child: Opacity(
-              opacity: _currentPage == index ? 1.0 : 0.5,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                // Kirim data yang sudah diekstrak ke card
-                child: _buildCompetitionCard(imageUrl, title, status),
-              ),
-            ),
-          );
+      child: GestureDetector(
+        onPanDown: (_) {
+          setState(() {
+            _userIsInteracting = true;
+          });
         },
+        onPanEnd: (_) {
+          Future.delayed(const Duration(seconds: 5), () {
+            if (mounted) {
+              setState(() {
+                _userIsInteracting = false;
+              });
+            }
+          });
+        },
+        child: PageView.builder(
+          controller: _pageController,
+          onPageChanged: (p) => setState(() => _currentPage = p),
+          itemCount: _competitionList.length,
+          itemBuilder: (context, index) {
+            final competition = _competitionList[index];
+            final String imageUrl =
+                competition['image_url'] ??
+                competition['poster'] ??
+                '';
+            final String title = competition['title'] ?? 'No Title';
+            final String status =
+                competition['display_status'] ??
+                'Closed';
+
+            return AnimatedBuilder(
+              animation: _pageController,
+              builder: (context, child) {
+                double value = 1.0;
+                if (_pageController.position.haveDimensions) {
+                  value = _pageController.page! - index;
+                  value = (1 - (value.abs() * 0.3)).clamp(0.7, 1.0);
+                }
+                return Center(
+                  child: SizedBox(
+                    height: Curves.easeInOut.transform(value) * 320,
+                    width: Curves.easeInOut.transform(value) * 280,
+                    child: child,
+                  ),
+                );
+              },
+              child: Opacity(
+                opacity: _currentPage == index ? 1.0 : 0.5,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                  child: GestureDetector(
+                    onTap: () {
+                      final competitionData = Competition.fromJson(competition);
+                      
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CompetitionDetailScreen(
+                            competition: competitionData,
+                            isSaved: false,
+                            onSaveToggle: () {},
+                          ),
+                        ),
+                      );
+                    },
+                    child: _buildCompetitionCard(imageUrl, title, status),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
   Widget _buildCompetitionCard(String imageUrl, String title, String status) {
-    Color statusColor = status == 'Closed'
-        ? Colors.white
-        : (status == 'On Going'
-              ? const Color(0xFF2D5F3F)
-              : const Color(0xFF8B6914));
+  Color statusColor = status == 'Closed'
+      ? Colors.white
+      : (status == 'On Going'
+            ? const Color(0xFF2D5F3F)
+            : const Color(0xFF8B6914));
 
-    Color statusBg = status == 'Closed'
-        ? const Color(0xFFE89B8E)
-        : (status == 'On Going'
-              ? const Color(0xFFA8D5BA)
-              : const Color(0xFFFFF59D));
+  Color statusBg = status == 'Closed'
+      ? const Color(0xFFE89B8E)
+      : (status == 'On Going'
+            ? const Color(0xFFA8D5BA)
+            : const Color(0xFFFFF59D));
 
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.shade300,
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
+  return Container(
+    // ✅ LAYER 1: SHADOW DI SINI (PALING LUAR)
+    decoration: BoxDecoration(
+      borderRadius: BorderRadius.circular(20),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.3),
+          blurRadius: 15,
+          offset: const Offset(0, 8),
+          spreadRadius: 2,
+        ),
+      ],
+    ),
+    // ✅ LAYER 2: CLIP ROUNDED CORNER DI DALAM
+    child: ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        // ✅ LAYER 3: BACKGROUND COLOR (FALLBACK)
+        color: Colors.grey.shade300,
         child: Stack(
           fit: StackFit.expand,
           children: [
             Image.network(
-              imageUrl, // Menggunakan imageUrl dinamis
+              imageUrl,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
                 return Container(
@@ -978,7 +1030,7 @@ class _HomePageState extends State<HomePage> {
               bottom: 20,
               left: 20,
               child: Text(
-                title, // Menggunakan title dinamis
+                title,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 22,
@@ -1006,7 +1058,7 @@ class _HomePageState extends State<HomePage> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  status, // Menggunakan status dinamis
+                  status,
                   style: TextStyle(
                     color: statusColor,
                     fontSize: 13,
@@ -1018,6 +1070,7 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:provider/provider.dart';
+import 'theme_provider.dart'; 
 import 'main.dart';
 
 class NotificationSettingsPage extends StatefulWidget {
-  const NotificationSettingsPage({Key? key}) : super(key: key);
+  const NotificationSettingsPage({super.key});
 
   @override
   State<NotificationSettingsPage> createState() =>
@@ -57,19 +58,31 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 1. Ambil state Dark Mode
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+
+    // 2. Definisikan warna dinamis
+    final backgroundColor = isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5);
+    final surfaceColor = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final primaryTextColor = isDark ? Colors.white : Colors.black;
+    final secondaryTextColor = isDark ? Colors.grey[400] : Colors.grey[600];
+    final iconColor = isDark ? Colors.white70 : Colors.black87;
+    final dividerColor = isDark ? Colors.grey[800] : Colors.grey[300];
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: backgroundColor,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: surfaceColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: Icon(Icons.arrow_back, color: primaryTextColor),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Notifikasi',
           style: TextStyle(
-            color: Colors.black,
+            color: primaryTextColor,
             fontSize: 18,
             fontWeight: FontWeight.bold,
           ),
@@ -93,24 +106,27 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFE89B8E).withOpacity(0.1),
+                  color: const Color(0xFFE89B8E).withOpacity(isDark ? 0.2 : 0.1),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: const Color(0xFFE89B8E).withOpacity(0.3),
                   ),
                 ),
                 child: Row(
-                  children: const [
-                    Icon(
+                  children: [
+                    const Icon(
                       Icons.notifications_active_outlined,
                       color: Color(0xFFE89B8E),
                       size: 24,
                     ),
-                    SizedBox(width: 12),
+                    const SizedBox(width: 12),
                     Expanded(
                       child: Text(
                         'Kelola notifikasi untuk tetap update dengan aktivitas Anda',
-                        style: TextStyle(fontSize: 14, color: Colors.black87),
+                        style: TextStyle(
+                          fontSize: 14, 
+                          color: isDark ? Colors.white : Colors.black87
+                        ),
                       ),
                     ),
                   ],
@@ -123,7 +139,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -141,13 +157,13 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       ),
                     ),
                     const SizedBox(width: 15),
-                    const Expanded(
+                    Expanded(
                       child: Text(
                         'Aktifkan Notifikasi',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                          color: primaryTextColor,
                         ),
                       ),
                     ),
@@ -158,9 +174,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           enableNotifications = value;
                         });
                       },
-                      activeColor: const Color(0xFFE89B8E),
-                      inactiveThumbColor: Colors.grey,
-                      inactiveTrackColor: Colors.grey.shade300,
+                      activeThumbColor: const Color(0xFFE89B8E),
+                      inactiveThumbColor: isDark ? Colors.grey[700] : Colors.grey,
+                      inactiveTrackColor: isDark ? Colors.grey[800] : Colors.grey.shade300,
                     ),
                   ],
                 ),
@@ -169,12 +185,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               const SizedBox(height: 30),
 
               // Notifikasi Kursus
-              const Text(
+              Text(
                 'Notifikasi Kursus',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: primaryTextColor,
                 ),
               ),
 
@@ -182,7 +198,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -199,8 +215,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         });
                       },
                       isFirst: true,
+                      isDark: isDark,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: dividerColor),
                     _buildToggleItem(
                       icon: Icons.library_add_outlined,
                       title: 'Kursus Baru Tersedia',
@@ -212,8 +229,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           newCourseAvailable = value;
                         });
                       },
+                      isDark: isDark,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: dividerColor),
                     _buildToggleItem(
                       icon: Icons.alarm,
                       title: 'Pengingat Kursus',
@@ -225,8 +243,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           courseReminders = value;
                         });
                       },
+                      isDark: isDark,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: dividerColor),
                     _buildToggleItem(
                       icon: Icons.assignment_late_outlined,
                       title: 'Deadline Tugas',
@@ -239,6 +258,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         });
                       },
                       isLast: true,
+                      isDark: isDark,
                     ),
                   ],
                 ),
@@ -247,12 +267,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               const SizedBox(height: 30),
 
               // Notifikasi Kompetisi
-              const Text(
+              Text(
                 'Notifikasi Kompetisi',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: primaryTextColor,
                 ),
               ),
 
@@ -260,7 +280,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -277,8 +297,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         });
                       },
                       isFirst: true,
+                      isDark: isDark,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: dividerColor),
                     _buildToggleItem(
                       icon: Icons.event_note_outlined,
                       title: 'Pengingat Kompetisi',
@@ -290,8 +311,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           competitionReminders = value;
                         });
                       },
+                      isDark: isDark,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: dividerColor),
                     _buildToggleItem(
                       icon: Icons.emoji_events_outlined,
                       title: 'Hasil Kompetisi',
@@ -303,8 +325,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           competitionResults = value;
                         });
                       },
+                      isDark: isDark,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: dividerColor),
                     _buildToggleItem(
                       icon: Icons.new_releases_outlined,
                       title: 'Kompetisi Baru',
@@ -317,6 +340,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         });
                       },
                       isLast: true,
+                      isDark: isDark,
                     ),
                   ],
                 ),
@@ -325,12 +349,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               const SizedBox(height: 30),
 
               // Notifikasi Mentoring
-              const Text(
+              Text(
                 'Notifikasi Mentoring',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: primaryTextColor,
                 ),
               ),
 
@@ -338,7 +362,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -355,8 +379,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         });
                       },
                       isFirst: true,
+                      isDark: isDark,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: dividerColor),
                     _buildToggleItem(
                       icon: Icons.message_outlined,
                       title: 'Pesan dari Mentor',
@@ -368,8 +393,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           mentorMessages = value;
                         });
                       },
+                      isDark: isDark,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: dividerColor),
                     _buildToggleItem(
                       icon: Icons.access_time,
                       title: 'Pengingat Sesi',
@@ -382,6 +408,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         });
                       },
                       isLast: true,
+                      isDark: isDark,
                     ),
                   ],
                 ),
@@ -390,12 +417,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               const SizedBox(height: 30),
 
               // Notifikasi Lainnya
-              const Text(
+              Text(
                 'Notifikasi Lainnya',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: primaryTextColor,
                 ),
               ),
 
@@ -403,7 +430,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -420,8 +447,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         });
                       },
                       isFirst: true,
+                      isDark: isDark,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: dividerColor),
                     _buildToggleItem(
                       icon: Icons.local_offer_outlined,
                       title: 'Promosi & Penawaran',
@@ -433,8 +461,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                           promotions = value;
                         });
                       },
+                      isDark: isDark,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: dividerColor),
                     _buildToggleItem(
                       icon: Icons.email_outlined,
                       title: 'Newsletter',
@@ -447,6 +476,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         });
                       },
                       isLast: true,
+                      isDark: isDark,
                     ),
                   ],
                 ),
@@ -455,12 +485,12 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               const SizedBox(height: 30),
 
               // Pengaturan Suara & Getar
-              const Text(
+              Text(
                 'Suara & Getar',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: primaryTextColor,
                 ),
               ),
 
@@ -468,7 +498,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
 
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -485,8 +515,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         });
                       },
                       isFirst: true,
+                      isDark: isDark,
                     ),
-                    const Divider(height: 1, indent: 56),
+                    Divider(height: 1, indent: 56, color: dividerColor),
                     _buildToggleItem(
                       icon: Icons.vibration,
                       title: 'Getar',
@@ -499,6 +530,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                         });
                       },
                       isLast: true,
+                      isDark: isDark,
                     ),
                   ],
                 ),
@@ -507,27 +539,27 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               const SizedBox(height: 30),
 
               // Quiet Hours
-              const Text(
+              Text(
                 'Quiet Hours',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: primaryTextColor,
                 ),
               ),
 
               const SizedBox(height: 8),
 
-              const Text(
+              Text(
                 'Nonaktifkan notifikasi pada waktu tertentu',
-                style: TextStyle(fontSize: 14, color: Colors.grey),
+                style: TextStyle(fontSize: 14, color: secondaryTextColor),
               ),
 
               const SizedBox(height: 15),
 
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: surfaceColor,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -536,19 +568,19 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                       padding: const EdgeInsets.all(16),
                       child: Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.nights_stay_outlined,
-                            color: Colors.black87,
+                            color: iconColor,
                             size: 24,
                           ),
                           const SizedBox(width: 15),
-                          const Expanded(
+                          Expanded(
                             child: Text(
                               'Aktifkan Quiet Hours',
                               style: TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color: primaryTextColor,
                               ),
                             ),
                           ),
@@ -561,27 +593,29 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                                     });
                                   }
                                 : null,
-                            activeColor: const Color(0xFFE89B8E),
-                            inactiveThumbColor: Colors.grey,
-                            inactiveTrackColor: Colors.grey.shade300,
+                            activeThumbColor: const Color(0xFFE89B8E),
+                            inactiveThumbColor: isDark ? Colors.grey[700] : Colors.grey,
+                            inactiveTrackColor: isDark ? Colors.grey[800] : Colors.grey.shade300,
                           ),
                         ],
                       ),
                     ),
                     if (quietHoursEnabled) ...[
-                      const Divider(height: 1),
+                      Divider(height: 1, color: dividerColor),
                       _buildTimeSelector(
                         icon: Icons.bedtime_outlined,
                         title: 'Mulai',
                         time: quietHoursStart,
                         onTap: () => _selectTime(context, true),
+                        isDark: isDark,
                       ),
-                      const Divider(height: 1, indent: 56),
+                      Divider(height: 1, indent: 56, color: dividerColor),
                       _buildTimeSelector(
                         icon: Icons.wb_sunny_outlined,
                         title: 'Selesai',
                         time: quietHoursEnd,
                         onTap: () => _selectTime(context, false),
+                        isDark: isDark,
                       ),
                     ],
                   ],
@@ -687,6 +721,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     required bool value,
     required bool enabled,
     required ValueChanged<bool> onChanged,
+    required bool isDark,
     bool isFirst = false,
     bool isLast = false,
   }) {
@@ -701,7 +736,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         ),
         child: Row(
           children: [
-            Icon(icon, color: Colors.black87, size: 24),
+            Icon(icon, color: isDark ? Colors.white70 : Colors.black87, size: 24),
             const SizedBox(width: 15),
             Expanded(
               child: Column(
@@ -709,16 +744,19 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Colors.black87,
+                      color: isDark ? Colors.white : Colors.black87,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+                    style: TextStyle(
+                      fontSize: 13, 
+                      color: isDark ? Colors.grey[400] : Colors.grey.shade600
+                    ),
                   ),
                 ],
               ),
@@ -727,9 +765,9 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
             Switch(
               value: value,
               onChanged: enabled ? onChanged : null,
-              activeColor: const Color(0xFFE89B8E),
-              inactiveThumbColor: Colors.grey,
-              inactiveTrackColor: Colors.grey.shade300,
+              activeThumbColor: const Color(0xFFE89B8E),
+              inactiveThumbColor: isDark ? Colors.grey[700] : Colors.grey,
+              inactiveTrackColor: isDark ? Colors.grey[800] : Colors.grey.shade300,
             ),
           ],
         ),
@@ -742,6 +780,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
     required String title,
     required TimeOfDay time,
     required VoidCallback onTap,
+    required bool isDark,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -749,18 +788,21 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
         padding: const EdgeInsets.all(16),
         child: Row(
           children: [
-            Icon(icon, color: Colors.black87, size: 24),
+            Icon(icon, color: isDark ? Colors.white70 : Colors.black87, size: 24),
             const SizedBox(width: 15),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(fontSize: 15, color: Colors.black87),
+                style: TextStyle(
+                  fontSize: 15, 
+                  color: isDark ? Colors.white : Colors.black87
+                ),
               ),
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
+                color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFF5F5F5),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -773,7 +815,7 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
               ),
             ),
             const SizedBox(width: 8),
-            const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
+            Icon(Icons.arrow_forward_ios, size: 16, color: isDark ? Colors.white38 : Colors.grey),
           ],
         ),
       ),
@@ -781,18 +823,29 @@ class _NotificationSettingsPageState extends State<NotificationSettingsPage> {
   }
 
   Future<void> _selectTime(BuildContext context, bool isStart) async {
+    final isDark = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
+    
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: isStart ? quietHoursStart : quietHoursEnd,
       builder: (BuildContext context, Widget? child) {
         return Theme(
-          data: ThemeData.light().copyWith(
-            primaryColor: const Color(0xFFE89B8E),
-            colorScheme: const ColorScheme.light(primary: Color(0xFFE89B8E)),
-            buttonTheme: const ButtonThemeData(
-              textTheme: ButtonTextTheme.primary,
-            ),
-          ),
+          // KITA UPDATE THEME DATA DISINI AGAR TIME PICKER MENGIKUTI DARK MODE
+          data: isDark 
+            ? ThemeData.dark().copyWith(
+                colorScheme: const ColorScheme.dark(
+                  primary: Color(0xFFE89B8E),
+                  surface: Color(0xFF1E1E1E),
+                  onSurface: Colors.white,
+                ), dialogTheme: DialogThemeData(backgroundColor: const Color(0xFF1E1E1E)),
+              )
+            : ThemeData.light().copyWith(
+                primaryColor: const Color(0xFFE89B8E),
+                colorScheme: const ColorScheme.light(primary: Color(0xFFE89B8E)),
+                buttonTheme: const ButtonThemeData(
+                  textTheme: ButtonTextTheme.primary,
+                ),
+              ),
           child: child!,
         );
       },

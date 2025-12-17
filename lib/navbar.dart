@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:google_nav_bar/google_nav_bar.dart'; // Import package baru ini
+import 'package:google_nav_bar/google_nav_bar.dart';
+import 'package:provider/provider.dart'; 
 
-// Import halaman (Pastikan path sesuai)
+// Import halaman
 import 'homepage.dart';
 import 'course/courses.dart';
 import 'competition.dart';
 import 'settings.dart';
+import 'theme_provider.dart';
 
 class Navbar extends StatefulWidget {
   final int initialIndex;
@@ -32,15 +34,6 @@ class _NavbarState extends State<Navbar> {
     _courseOpenMyCourse = widget.initialSelectMyCourse;
   }
 
-  // Daftar Halaman
-  final List<Widget> _pages = [
-    const HomePage(),
-    const CoursePage(),
-    const CompetitionListScreen(),
-    const SettingsPage(),
-  ];
-
-  // Warna tema kamu
   final Color _themeColor = const Color(0xFFE89B8E);
 
   @override
@@ -55,10 +48,9 @@ class _NavbarState extends State<Navbar> {
       final bool goToMyCourse = selectMyCourse || initialTab == 'MyCourse';
       if (goToMyCourse) {
         setState(() {
-          _selectedIndex = 1; // Course tab
-          _courseOpenMyCourse = true; // signal CoursePage to open My Course
+          _selectedIndex = 1;
+          _courseOpenMyCourse = true;
         });
-        // Clear the args-driven flag after first build
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             setState(() => _courseOpenMyCourse = false);
@@ -72,11 +64,13 @@ class _NavbarState extends State<Navbar> {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final isDark = themeProvider.isDarkMode;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
       body: Stack(
         children: [
-          // Content Pages
           [
             const HomePage(),
             CoursePage(initialSelectMyCourse: _courseOpenMyCourse),
@@ -84,7 +78,6 @@ class _NavbarState extends State<Navbar> {
             const SettingsPage(),
           ][_selectedIndex],
 
-          // Floating Navbar di bottom
           Positioned(
             bottom: 0,
             left: 0,
@@ -92,21 +85,23 @@ class _NavbarState extends State<Navbar> {
             child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 20),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                 borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    blurRadius: 20,
-                    color: Colors.black.withOpacity(0.1),
-                    offset: const Offset(0, -5),
-                  ),
-                ],
+                boxShadow: isDark 
+                  ? []
+                  : [
+                      BoxShadow(
+                        blurRadius: 20,
+                        color: Colors.black.withOpacity(0.1),
+                        offset: const Offset(0, -5),
+                      ),
+                    ],
               ),
               child: Padding(
                 padding: const EdgeInsets.all(5),
                 child: GNav(
-                  rippleColor: Colors.grey[300]!,
-                  hoverColor: Colors.grey[100]!,
+                  rippleColor: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                  hoverColor: isDark ? Colors.grey[900]! : Colors.grey[100]!,
                   gap: 4,
                   activeColor: Colors.white,
                   iconSize: 27,
@@ -116,9 +111,12 @@ class _NavbarState extends State<Navbar> {
                   ),
                   duration: const Duration(milliseconds: 400),
                   tabBackgroundColor: _themeColor,
-                  color: Colors.grey[500],
+                  color: isDark ? Colors.grey[400] : Colors.grey[500],
                   tabs: const [
-                    GButton(icon: Icons.home_rounded, text: 'Home'),
+                    GButton(
+                      icon: Icons.home_rounded, 
+                      text: 'Home',
+                    ),
                     GButton(
                       icon: Icons.play_circle_fill_rounded,
                       text: 'Course',
@@ -127,7 +125,10 @@ class _NavbarState extends State<Navbar> {
                       icon: Icons.emoji_events_rounded,
                       text: 'Competition',
                     ),
-                    GButton(icon: Icons.settings_rounded, text: 'Setting'),
+                    GButton(
+                      icon: Icons.settings_rounded, 
+                      text: 'Settings',
+                    ),
                   ],
                   selectedIndex: _selectedIndex,
                   onTabChange: (index) {

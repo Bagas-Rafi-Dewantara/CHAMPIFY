@@ -8,7 +8,7 @@ import 'authentication/login.dart' show LoginPage;
 import 'main.dart';
 
 class ProfileEditPage extends StatefulWidget {
-  const ProfileEditPage({Key? key}) : super(key: key);
+  const ProfileEditPage({super.key});
 
   @override
   State<ProfileEditPage> createState() => _ProfileEditPageState();
@@ -70,20 +70,74 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
   Future<String?> _uploadAvatar(File file) async {
     final user = supabase.auth.currentUser;
-    if (user == null) return null;
+    if (user == null) {
+      debugPrint('❌ User tidak login');
+      return null;
+    }
+    
     final fileExt = file.path.split('.').last;
-    final filePath = 'avatars/${user.id}.${fileExt}';
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+    final filePath = '${user.id}/$fileName';
 
-    await supabase.storage
-        .from('avatars')
-        .uploadBinary(
-          filePath,
-          await file.readAsBytes(),
-          fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
-        );
+    debugPrint('📤 Uploading to: Profile_picture/$filePath');
 
-    final publicUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
-    return publicUrl;
+    try {
+      // ✅ Upload ke bucket Profile_picture
+      await supabase.storage
+          .from('Profile_picture')
+          .upload(
+            filePath,
+            file,
+            fileOptions: const FileOptions(
+              cacheControl: '3600',
+              upsert: false,
+            ),
+          );
+
+      // ✅ Get public URL dari bucket Profile_picture
+      final publicUrl = supabase.storage
+          .from('Profile_picture')
+          .getPublicUrl(filePath);
+      
+      debugPrint('✅ Upload berhasil! URL: $publicUrl');
+      return publicUrl;
+      
+    } catch (e) {
+      debugPrint('❌ Upload gagal: $e');
+      
+      // Cek apakah error karena file sudah ada (duplicate)
+      if (e.toString().contains('Duplicate') || e.toString().contains('already exists')) {
+        debugPrint('⚠️ File duplicate, coba dengan nama baru...');
+        // Coba generate nama file baru dengan suffix random
+        final newFileName = '${DateTime.now().millisecondsSinceEpoch}_${DateTime.now().microsecond}.$fileExt';
+        final newFilePath = '${user.id}/$newFileName';
+        
+        try {
+          await supabase.storage
+              .from('Profile_picture')
+              .upload(
+                newFilePath,
+                file,
+                fileOptions: const FileOptions(
+                  cacheControl: '3600',
+                  upsert: false,
+                ),
+              );
+          
+          final publicUrl = supabase.storage
+              .from('Profile_picture')
+              .getPublicUrl(newFilePath);
+          
+          debugPrint('✅ Upload berhasil (retry)! URL: $publicUrl');
+          return publicUrl;
+        } catch (retryError) {
+          debugPrint('❌ Retry upload gagal: $retryError');
+          return null;
+        }
+      }
+      
+      return null;
+    }
   }
 
   Future<void> _save() async {
@@ -123,10 +177,20 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
     try {
       String? avatarUrl = _avatarUrl;
+      
+      // Upload foto baru jika ada
       if (_selectedImageFile != null) {
+        debugPrint('🔄 Mulai upload foto...');
         avatarUrl = await _uploadAvatar(_selectedImageFile!);
+        
+        if (avatarUrl == null) {
+          throw Exception('Gagal upload foto. Coba lagi.');
+        }
+        debugPrint('✅ Foto berhasil diupload: $avatarUrl');
       }
 
+      // Update user metadata
+      debugPrint('🔄 Update user metadata...');
       await supabase.auth.updateUser(
         UserAttributes(
           email: email == user.email ? null : email,
@@ -137,12 +201,24 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             'major': major,
             'university': university,
             'phone': phone,
-            if (avatarUrl != null) 'avatar_url': avatarUrl,
+            'avatar_url': avatarUrl ?? '',
           },
         ),
       );
 
+      debugPrint('✅ Profile berhasil diupdate!');
+
       if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profil berhasil disimpan!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      
+      // Kembali ke halaman sebelumnya dengan data baru
       Navigator.pop(context, {
         'name': name,
         'headline': headline,
@@ -154,9 +230,16 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         'phone': phone,
       });
     } catch (e) {
+      debugPrint('❌ Error save: $e');
+      
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Gagal menyimpan: $e')));
+      ).showSnackBar(SnackBar(
+        content: Text('Gagal menyimpan: $e'),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ));
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -164,9 +247,10 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Widget untuk menampilkan avatar
     final avatar = _selectedImageFile != null
         ? Image.file(_selectedImageFile!, fit: BoxFit.cover)
-        : (_avatarUrl != null
+        : (_avatarUrl != null && _avatarUrl!.isNotEmpty
               ? Image.network(_avatarUrl!, fit: BoxFit.cover)
               : const Icon(Icons.person, size: 36, color: Colors.white));
 
@@ -191,6 +275,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
+            // Avatar dengan tombol edit
             Stack(
               children: [
                 CircleAvatar(
@@ -214,13 +299,15 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
                           BoxShadow(color: Colors.black26, blurRadius: 4),
                         ],
                       ),
-                      child: const Icon(Icons.photo_camera, size: 18),
+                      child: const Icon(Icons.photo_camera, size: 18, color: Color(0xFFE89B8E)),
                     ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 20),
+            
+            // Form fields
             TextField(
               controller: _nameController,
               textCapitalization: TextCapitalization.words,
