@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'verification_page.dart';
 
 class Signup2Screen extends StatefulWidget {
@@ -32,7 +33,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
   @override
   void dispose() {
     usernameController.dispose();
-    emailController.dispose();
+    emailController. dispose();
     passwordController.dispose();
     confirmPasswordController.dispose();
     super.dispose();
@@ -41,7 +42,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
   @override
   Widget build(BuildContext context) {
     return Theme(
-      data: ThemeData.light(),
+      data: ThemeData. light(),
       child: Scaffold(
         backgroundColor: const Color(0xFFE8D5C4),
         body: Stack(
@@ -49,7 +50,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
             Positioned(
               top: 200,
               right: -30,
-              child: Opacity(
+              child:  Opacity(
                 opacity: 0.7,
                 child: Image.asset(
                   'assets/images/ngintip.png',
@@ -60,7 +61,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
               ),
             ),
             SingleChildScrollView(
-              child: Column(
+              child:  Column(
                 children: [
                   Padding(
                     padding: const EdgeInsets.only(top: 40, left: 20, right: 20),
@@ -114,24 +115,24 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                   ),
                   const SizedBox(height: 30),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 30),
+                    padding: const EdgeInsets. symmetric(horizontal: 30),
                     child: Column(
                       children: [
                         TextField(
                           controller: usernameController,
-                          decoration: _inputDecoration('Username', Icons.person),
+                          decoration:  _inputDecoration('Username', Icons.person),
                         ),
                         const SizedBox(height: 16),
                         TextField(
                           controller: emailController,
                           decoration: _inputDecoration('Email', Icons.email),
-                          keyboardType: TextInputType.emailAddress,
+                          keyboardType: TextInputType. emailAddress,
                         ),
                         const SizedBox(height: 16),
                         TextField(
                           controller: passwordController,
-                          obscureText: !showPassword,
-                          decoration: _passwordInputDecoration(
+                          obscureText: ! showPassword,
+                          decoration:  _passwordInputDecoration(
                             'Password',
                             showPassword,
                             () => setState(() => showPassword = !showPassword),
@@ -144,7 +145,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                           decoration: _passwordInputDecoration(
                             'Confirm Password',
                             showConfirmPassword,
-                            () => setState(() => showConfirmPassword = !showConfirmPassword),
+                            () => setState(() => showConfirmPassword = ! showConfirmPassword),
                           ),
                         ),
                       ],
@@ -153,7 +154,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                   const SizedBox(height: 40),
                   Padding(
                     padding: const EdgeInsets.only(right: 30, bottom: 40),
-                    child: Align(
+                    child:  Align(
                       alignment: Alignment.bottomRight,
                       child: Container(
                         decoration: BoxDecoration(
@@ -168,7 +169,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
                                   child: CircularProgressIndicator(strokeWidth: 2),
                                 )
                               : const Icon(Icons.arrow_forward, color: Color(0xFF9B7765)),
-                          onPressed: isLoading ? null : _handleSignup,
+                          onPressed:  isLoading ?  null : _handleSignup,
                         ),
                       ),
                     ),
@@ -193,7 +194,7 @@ class _Signup2ScreenState extends State<Signup2Screen> {
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: Color(0xFFC4B0A0), width: 2),
+        borderSide: const BorderSide(color:  Color(0xFFC4B0A0), width: 2),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
@@ -220,9 +221,9 @@ class _Signup2ScreenState extends State<Signup2Screen> {
         borderRadius: BorderRadius.circular(20),
         borderSide: const BorderSide(color: Color(0xFFC4B0A0), width: 2),
       ),
-      enabledBorder: OutlineInputBorder(
+      enabledBorder:  OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
-        borderSide: const BorderSide(color: Color(0xFFC4B0A0), width: 2),
+        borderSide:  const BorderSide(color: Color(0xFFC4B0A0), width: 2),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(20),
@@ -234,9 +235,54 @@ class _Signup2ScreenState extends State<Signup2Screen> {
   }
 
   Future<void> _handleSignup() async {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const VerificationPage()),
-    );
+    try {
+      setState(() => isLoading = true);
+
+      // Validasi password
+      if (passwordController.text != confirmPasswordController.text) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password tidak sesuai')),
+        );
+        setState(() => isLoading = false);
+        return;
+      }
+
+      // Sign up dengan Supabase
+      await Supabase.instance.client.auth.signUp(
+        email: emailController.text,
+        password: passwordController.text,
+        data: {
+          'username': usernameController.text,
+          'full_name': widget.fullName,
+          'major': widget.major,
+          'university': widget.university,
+          'phone_number': widget.phoneNumber,
+        },
+      );
+
+      // Email konfirmasi otomatis dikirim oleh Supabase
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const VerificationPage()),
+        );
+      }
+    } on AuthException catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${error.message}')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $error')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
+    }
   }
 }
