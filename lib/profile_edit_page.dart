@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -24,6 +26,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   final _phoneController = TextEditingController();
   bool _saving = false;
   File? _selectedImageFile;
+  Uint8List? _selectedImageBytes;
+
   String? _avatarUrl;
 
   @override
@@ -62,28 +66,46 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
       imageQuality: 80,
     );
     if (picked != null) {
-      setState(() {
-        _selectedImageFile = File(picked.path);
-      });
+      if (kIsWeb) {
+        final bytes = await picked.readAsBytes();
+        setState(() {
+          _selectedImageBytes = bytes;
+          _selectedImageFile = null;
+        });
+      } else {
+        setState(() {
+          _selectedImageFile = File(picked.path);
+          _selectedImageBytes = null;
+        });
+      }
     }
   }
 
-  Future<String?> _uploadAvatar(File file) async {
+  Future<String?> _uploadAvatar({
+    File? file,
+    Uint8List? bytes,
+    String? fileName,
+  }) async {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
-    final fileExt = file.path.split('.').last;
-    final filePath = 'avatars/${user.id}.${fileExt}';
+
+    final ext =
+        fileName?.split('.').last ??
+        (file != null ? file.path.split('.').last : 'jpg');
+    final path = '${user.id}.$ext';
+
+    final data = bytes ?? await file!.readAsBytes();
 
     await supabase.storage
-        .from('avatars')
+        .from('Profile_picture')
         .uploadBinary(
-          filePath,
-          await file.readAsBytes(),
+          path,
+          data,
           fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
         );
 
-    final publicUrl = supabase.storage.from('avatars').getPublicUrl(filePath);
-    return publicUrl;
+    final url = supabase.storage.from('Profile_picture').getPublicUrl(path);
+    return url;
   }
 
   Future<void> _save() async {
@@ -123,8 +145,12 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
 
     try {
       String? avatarUrl = _avatarUrl;
-      if (_selectedImageFile != null) {
-        avatarUrl = await _uploadAvatar(_selectedImageFile!);
+      if (_selectedImageFile != null || _selectedImageBytes != null) {
+        avatarUrl = await _uploadAvatar(
+          file: kIsWeb ? null : _selectedImageFile,
+          bytes: kIsWeb ? _selectedImageBytes : null,
+          fileName: kIsWeb ? 'avatar_${user.id}.jpg' : _selectedImageFile?.path,
+        );
       }
 
       await supabase.auth.updateUser(
@@ -141,6 +167,23 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
           },
         ),
       );
+
+      await supabase.auth.refreshSession();
+
+      final Map<String, dynamic> profileUpdate = {
+        'id_pengguna': user.id,
+        'full_name': name,
+        if (avatarUrl != null) 'avatar_url': avatarUrl,
+      };
+
+      try {
+        await supabase
+            .from('pengguna')
+            .upsert(profileUpdate, onConflict: 'id_pengguna');
+        debugPrint('✓ Berhasil update tabel pengguna');
+      } catch (e) {
+        debugPrint('✗ Gagal update tabel pengguna: $e');
+      }
 
       if (!mounted) return;
       Navigator.pop(context, {
@@ -166,6 +209,8 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
   Widget build(BuildContext context) {
     final avatar = _selectedImageFile != null
         ? Image.file(_selectedImageFile!, fit: BoxFit.cover)
+        : _selectedImageBytes != null
+        ? Image.memory(_selectedImageBytes!, fit: BoxFit.cover)
         : (_avatarUrl != null
               ? Image.network(_avatarUrl!, fit: BoxFit.cover)
               : const Icon(Icons.person, size: 36, color: Colors.white));

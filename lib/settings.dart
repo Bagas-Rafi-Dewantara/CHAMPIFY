@@ -36,11 +36,12 @@ class _SettingsPageState extends State<SettingsPage> {
   void _loadProfile() {
     final user = supabase.auth.currentUser;
     if (user == null) return;
+
+    final metaName = user.userMetadata?['full_name'] as String?;
+    debugPrint('⚙️ Settings loading profile - Metadata name: $metaName');
+
     setState(() {
-      _displayName =
-          user.userMetadata?['full_name'] ??
-          user.email?.split('@').first ??
-          'Pengguna';
+      _displayName = metaName ?? user.email?.split('@').first ?? 'Pengguna';
       _email = user.email ?? '';
       _avatarUrl = user.userMetadata?['avatar_url'];
     });
@@ -180,14 +181,17 @@ class _SettingsPageState extends State<SettingsPage> {
               // --- PROFILE SECTION (KLIK UNTUK LOGIN) ---
               GestureDetector(
                 onTap: () async {
-                  await Navigator.push(
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const ProfilePage(),
                     ),
                   );
+                  // Force refresh auth session dan reload profile
                   await supabase.auth.refreshSession();
-                  _loadProfile();
+                  if (mounted) {
+                    _loadProfile();
+                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.all(16),

@@ -38,8 +38,6 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
 
-      // PERUBAHAN DISINI:
-      // Langsung ke Navbar (Homepage) tanpa cek login
       home: const WelcomePage(),
 
       routes: {

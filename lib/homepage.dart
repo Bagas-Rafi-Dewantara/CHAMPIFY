@@ -244,56 +244,33 @@ class _HomePageState extends State<HomePage> {
 
   // --- LOGIKA BARU: AMBIL NAMA PENGGUNA DARI SUPABASE ---
   Future<void> _fetchUserData() async {
-    // *ASUMSI: Anda sudah memiliki ID pengguna yang sedang login*
-    // Contoh jika menggunakan Supabase Auth:
     final user = supabase.auth.currentUser;
     final currentUserId = user?.id;
 
+    debugPrint('📱 Fetching user data...');
+
     if (user != null) {
+      final metaName = user.userMetadata?['full_name'] as String?;
+      debugPrint('📋 Metadata name: $metaName');
+
       // Gunakan metadata untuk respon cepat di header
-      _userName =
-          user.userMetadata?['full_name'] ??
-          user.email?.split('@').first ??
-          'Pengguna';
+      _userName = metaName ?? user.email?.split('@').first ?? 'Pengguna';
       _avatarUrl = user.userMetadata?['avatar_url'];
+
+      if (mounted) {
+        setState(() {
+          _isUserLoading = false;
+        });
+      }
     }
 
     if (currentUserId == null) {
       if (mounted) {
         setState(() {
           _isUserLoading = false;
-          // Biarkan _userName tetap 'Pengguna' (default) jika belum login
         });
       }
       return;
-    }
-
-    try {
-      // Ambil data dari tabel 'pengguna' berdasarkan ID pengguna yang sedang login
-      final data = await supabase
-          .from('pengguna')
-          .select('full_name') // Hanya ambil kolom full_name
-          .eq(
-            'id_pengguna',
-            currentUserId,
-          ) // Asumsi kolom ID di tabel 'pengguna' bernama 'id_pengguna'
-          .single(); // Ambil hanya satu baris
-
-      if (mounted) {
-        setState(() {
-          final String fullName = data['full_name'] ?? _userName;
-          _userName = fullName;
-          _isUserLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error fetching user data: $e');
-      if (mounted) {
-        setState(() {
-          _isUserLoading = false;
-          _userName = 'Pengguna (Gagal Load)';
-        });
-      }
     }
   }
 
@@ -397,11 +374,15 @@ class _HomePageState extends State<HomePage> {
           ],
         ),
         InkWell(
-          onTap: () {
-            Navigator.push(
+          onTap: () async {
+            await Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const ProfilePage()),
             );
+            await supabase.auth.refreshSession();
+            if (mounted) {
+              _fetchUserData();
+            }
           },
           borderRadius: BorderRadius.circular(32),
           child: CircleAvatar(
