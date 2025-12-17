@@ -471,9 +471,9 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   });
 
   @override
-  double get minExtent => 160;
+  double get minExtent => 120;
   @override
-  double get maxExtent => 160;
+  double get maxExtent => 120;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -485,7 +485,7 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
             child: TextField(
@@ -493,13 +493,17 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
               onChanged: onSearchChanged,
               style: theme.textTheme.bodyLarge, // Text input color
               decoration: InputDecoration(
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 hintText: 'Search competition',
                 hintStyle: TextStyle(color: isDark ? Colors.grey.shade500 : Colors.grey.shade400),
-                prefixIcon: Icon(Icons.search, color: isDark ? Colors.grey.shade500 : Colors.grey.shade400),
+                prefixIcon: Icon(Icons.search, size: 20, color: isDark ? Colors.grey.shade500 : Colors.grey.shade400),
                 suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(icon: Icon(Icons.clear, color: Colors.grey.shade600), onPressed: onClearSearch)
+                    ? IconButton(icon: Icon(Icons.clear, size: 20, color: Colors.grey.shade600), onPressed: onClearSearch)
                     : null,
                 filled: true,
+                prefixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                suffixIconConstraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 fillColor: theme.inputDecorationTheme.fillColor, // Sesuai tema (Hitam/Putih)
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                 enabledBorder: theme.inputDecorationTheme.enabledBorder,
@@ -507,10 +511,10 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
               children: [
                 FilterChipWidget(label: 'Saved', isSelected: selectedFilter == CompetitionStatus.saved, onTap: () => onFilterChanged(CompetitionStatus.saved)),
@@ -1037,7 +1041,7 @@ class FilterChipWidget extends StatelessWidget {
     return GestureDetector(
       onTap: onTap, 
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), 
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8), 
         decoration: BoxDecoration(
           color: isSelected ? theme.primaryColor : theme.cardTheme.color, 
           borderRadius: BorderRadius.circular(20), 
