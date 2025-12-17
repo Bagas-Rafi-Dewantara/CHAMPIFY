@@ -2,6 +2,7 @@ import 'package:champify/homepage.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 
 // Import halaman
@@ -42,16 +43,14 @@ class MyApp extends StatelessWidget {
         if (themeProvider.isLoading) {
           return const MaterialApp(
             debugShowCheckedModeBanner: false,
-            home: Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            ),
+            home: Scaffold(body: Center(child: CircularProgressIndicator())),
           );
         }
 
         return MaterialApp(
           title: 'Champify',
           debugShowCheckedModeBanner: false,
-          
+
           theme: themeProvider.lightTheme.copyWith(
             textTheme: GoogleFonts.poppinsTextTheme(
               themeProvider.lightTheme.textTheme,
@@ -62,10 +61,12 @@ class MyApp extends StatelessWidget {
               themeProvider.darkTheme.textTheme,
             ),
           ),
-          themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+          themeMode: themeProvider.isDarkMode
+              ? ThemeMode.dark
+              : ThemeMode.light,
 
           home: const WelcomePage(),
-          
+
           onGenerateRoute: (settings) {
             Widget buildRoute(Widget page) {
               return page;

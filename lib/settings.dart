@@ -38,11 +38,12 @@ class _SettingsPageState extends State<SettingsPage> {
   void _loadProfile() {
     final user = supabase.auth.currentUser;
     if (user == null) return;
+
+    final metaName = user.userMetadata?['full_name'] as String?;
+    debugPrint('⚙️ Settings loading profile - Metadata name: $metaName');
+
     setState(() {
-      _displayName =
-          user.userMetadata?['full_name'] ??
-          user.email?.split('@').first ??
-          'Pengguna';
+      _displayName = metaName ?? user.email?.split('@').first ?? 'Pengguna';
       _email = user.email ?? '';
       _avatarUrl = user.userMetadata?['avatar_url'];
     });
@@ -53,10 +54,10 @@ class _SettingsPageState extends State<SettingsPage> {
     final bottomInset = MediaQuery.of(context).viewPadding.bottom;
     const baseBottomGap = 100.0;
     final scrollBottomPadding = baseBottomGap + bottomInset;
-    
+
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    
+
     final contentItems = [
       _SettingItem(
         title: 'Rekomendasi',
@@ -127,8 +128,8 @@ class _SettingsPageState extends State<SettingsPage> {
             Text(
               'Indonesia',
               style: TextStyle(
-                fontSize: 14, 
-                color: isDark ? Colors.grey[400] : Colors.black
+                fontSize: 14,
+                color: isDark ? Colors.grey[400] : Colors.black,
               ),
             ),
             const SizedBox(width: 8),
@@ -137,7 +138,7 @@ class _SettingsPageState extends State<SettingsPage> {
         ),
         onTap: _showLanguageComingSoon,
       ),
-      
+
       _SettingItem(
         title: 'Mode Gelap',
         icon: isDark ? Icons.dark_mode : Icons.light_mode,
@@ -167,7 +168,9 @@ class _SettingsPageState extends State<SettingsPage> {
               .toList();
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF5F5F5),
+      backgroundColor: isDark
+          ? const Color(0xFF121212)
+          : const Color(0xFFF5F5F5),
       body: SingleChildScrollView(
         padding: EdgeInsets.only(bottom: scrollBottomPadding),
         child: Padding(
@@ -185,12 +188,12 @@ class _SettingsPageState extends State<SettingsPage> {
                 style: TextStyle(color: isDark ? Colors.white : Colors.black),
                 decoration: InputDecoration(
                   hintText: 'Cari...',
-                  hintStyle: TextStyle(color: isDark ? Colors.grey : Colors.grey),
+                  hintStyle: TextStyle(
+                    color: isDark ? Colors.grey : Colors.grey,
+                  ),
                   prefixIcon: const Icon(Icons.search, color: Colors.grey),
                   filled: true,
-                  fillColor: isDark 
-                      ? const Color(0xFF1E1E1E) 
-                      : Colors.white,
+                  fillColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 12,
@@ -207,26 +210,29 @@ class _SettingsPageState extends State<SettingsPage> {
               // PROFILE SECTION
               GestureDetector(
                 onTap: () async {
-                  await Navigator.push(
+                  final result = await Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => const ProfilePage(),
                     ),
                   );
+                  // Force refresh auth session dan reload profile
                   await supabase.auth.refreshSession();
-                  _loadProfile();
+                  if (mounted) {
+                    _loadProfile();
+                  }
                 },
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: isDark 
-                        ? null 
+                    border: isDark
+                        ? null
                         : Border.all(color: Colors.grey.shade200, width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: isDark 
+                        color: isDark
                             ? Colors.black.withOpacity(0.3)
                             : Colors.grey.shade200,
                         blurRadius: 10,
@@ -247,28 +253,33 @@ class _SettingsPageState extends State<SettingsPage> {
                             : null,
                       ),
                       const SizedBox(width: 15),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            _displayName,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : Colors.black,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _displayName,
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _email.isEmpty ? 'Lengkapi email Anda' : _email,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
+                            const SizedBox(height: 4),
+                            Text(
+                              _email.isEmpty ? 'Lengkapi email Anda' : _email,
+                              maxLines: 2,
+                              softWrap: true,
+                              overflow: TextOverflow.visible,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                      const Spacer(),
+                      const SizedBox(width: 12),
                       const Icon(
                         Icons.arrow_forward_ios,
                         size: 16,
@@ -298,12 +309,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: isDark 
-                        ? null 
+                    border: isDark
+                        ? null
                         : Border.all(color: Colors.grey.shade200, width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: isDark 
+                        color: isDark
                             ? Colors.black.withOpacity(0.3)
                             : Colors.grey.shade200,
                         blurRadius: 10,
@@ -344,12 +355,12 @@ class _SettingsPageState extends State<SettingsPage> {
                   decoration: BoxDecoration(
                     color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
-                    border: isDark 
-                        ? null 
+                    border: isDark
+                        ? null
                         : Border.all(color: Colors.grey.shade200, width: 1),
                     boxShadow: [
                       BoxShadow(
-                        color: isDark 
+                        color: isDark
                             ? Colors.black.withOpacity(0.3)
                             : Colors.grey.shade200,
                         blurRadius: 10,
@@ -391,12 +402,12 @@ class _SettingsPageState extends State<SettingsPage> {
                     decoration: BoxDecoration(
                       color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: isDark 
-                          ? null 
+                      border: isDark
+                          ? null
                           : Border.all(color: Colors.grey.shade200, width: 1),
                       boxShadow: [
                         BoxShadow(
-                          color: isDark 
+                          color: isDark
                               ? Colors.black.withOpacity(0.3)
                               : Colors.grey.shade200,
                           blurRadius: 10,
@@ -414,12 +425,12 @@ class _SettingsPageState extends State<SettingsPage> {
                     decoration: BoxDecoration(
                       color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                       borderRadius: BorderRadius.circular(12),
-                      border: isDark 
-                          ? null 
+                      border: isDark
+                          ? null
                           : Border.all(color: Colors.grey.shade200, width: 1),
                       boxShadow: [
                         BoxShadow(
-                          color: isDark 
+                          color: isDark
                               ? Colors.black.withOpacity(0.3)
                               : Colors.grey.shade200,
                           blurRadius: 10,
@@ -464,8 +475,8 @@ class _SettingsPageState extends State<SettingsPage> {
                     color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.red, width: 1.5),
-                    boxShadow: isDark 
-                        ? null 
+                    boxShadow: isDark
+                        ? null
                         : [
                             BoxShadow(
                               color: Colors.grey.shade200,
@@ -496,8 +507,11 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   void _showLanguageComingSoon() {
-    final isDark = Provider.of<ThemeProvider>(context, listen: false).isDarkMode;
-    
+    final isDark = Provider.of<ThemeProvider>(
+      context,
+      listen: false,
+    ).isDarkMode;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
@@ -511,11 +525,7 @@ class _SettingsPageState extends State<SettingsPage> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.language,
-                  size: 64,
-                  color: Color(0xFFE89B8E),
-                ),
+                const Icon(Icons.language, size: 64, color: Color(0xFFE89B8E)),
                 const SizedBox(height: 16),
                 Text(
                   'Coming Soon!',

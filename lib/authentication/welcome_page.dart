@@ -10,30 +10,24 @@ class WelcomePage extends StatelessWidget {
       child: Scaffold(
         backgroundColor: const Color(0xFFFFF8DC),
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32),
             child: Column(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Image.asset(
-                      'assets/images/logofull.png',
-                      height: 40,
-                    ),
+                    Image.asset('assets/images/logofull.png', height: 40),
                   ],
                 ),
-               
-                const SizedBox(height: 100),
-                Image.asset(
-                  'assets/images/starsignup.png',
-                  height: 250,
-                ),
-                
-                const SizedBox(height: 50),
+                const SizedBox(height: 80),
+                Image.asset('assets/images/starsignup.png', height: 240),
+                const SizedBox(height: 40),
                 const Text(
                   'Hi, fellas',
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 48,
                     fontWeight: FontWeight.bold,
@@ -43,12 +37,10 @@ class WelcomePage extends StatelessWidget {
                 const SizedBox(height: 8),
                 const Text(
                   'are you ready to be a gladiator?',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black87,
-                  ),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.black87),
                 ),
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
                 SizedBox(
                   width: double.infinity,
                   height: 56,
