@@ -1,14 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; 
+import 'package:provider/provider.dart';
 import 'dart:async';
-import '../main.dart'; 
+import '../main.dart';
 import 'mentoring.dart';
 import 'course/detail_course.dart';
 import 'competition.dart' hide supabase;
 import 'course/courses.dart';
 import 'profile_page.dart';
-import 'theme_provider.dart'; 
-
+import 'theme_provider.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -108,62 +107,59 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-Future<void> _fetchHomeCompetitions() async {
-  try {
-    // Ambil 5 kompetisi terbaru yang statusnya ongoing atau almost over
-    final allActiveData = await supabase
-        .from('competition')
-        .select('*')
-        .or('status.eq.ongoing,status.eq.almost over')
-        .order('end_date', ascending: true)
-        .limit(5); // Limit 5 untuk recommended
+  Future<void> _fetchHomeCompetitions() async {
+    try {
+      // Ambil 5 kompetisi terbaru yang statusnya ongoing atau almost over
+      final allActiveData = await supabase
+          .from('competition')
+          .select('*')
+          .or('status.eq.ongoing,status.eq.almost over')
+          .order('end_date', ascending: true)
+          .limit(5); // Limit 5 untuk recommended
 
-    final List<Map<String, dynamic>> combinedData =
-        List<Map<String, dynamic>>.from(allActiveData);
+      final List<Map<String, dynamic>> combinedData =
+          List<Map<String, dynamic>>.from(allActiveData);
 
-    if (mounted) {
-      setState(() {
-        _competitionList = combinedData.map((comp) {
-          final String dbStatus = comp['status'].toString().toLowerCase();
-          final String imageUrl = comp['image_url'] ?? comp['poster'] ?? '';
+      if (mounted) {
+        setState(() {
+          _competitionList = combinedData.map((comp) {
+            final String dbStatus = comp['status'].toString().toLowerCase();
+            final String imageUrl = comp['image_url'] ?? comp['poster'] ?? '';
 
-          String displayStatus;
-          if (dbStatus == 'almost over') {
-            displayStatus = 'Almost Over';
-          } else if (dbStatus == 'ongoing') {
-            displayStatus = 'On Going';
-          } else {
-            displayStatus = 'On Going';
+            String displayStatus;
+            if (dbStatus == 'almost over') {
+              displayStatus = 'Almost Over';
+            } else if (dbStatus == 'ongoing') {
+              displayStatus = 'On Going';
+            } else {
+              displayStatus = 'On Going';
+            }
+
+            return {
+              ...comp,
+              'image_url_final': imageUrl,
+              'display_status': displayStatus,
+            };
+          }).toList();
+
+          _isLoadingCompetitions = false;
+
+          if (_competitionList.isNotEmpty) {
+            _currentPage = 0;
           }
-
-          return {
-            ...comp,
-            'image_url_final': imageUrl,
-            'display_status': displayStatus,
-          };
-        }).toList();
-
-        _isLoadingCompetitions = false;
-
-        if (_competitionList.isNotEmpty) {
-          _currentPage = 0;
-        }
-      });
-    }
-  } catch (e) {
-    debugPrint('Error fetching home competitions: $e');
-    if (mounted) {
-      setState(() => _isLoadingCompetitions = false);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching home competitions: $e');
+      if (mounted) {
+        setState(() => _isLoadingCompetitions = false);
+      }
     }
   }
-}
 
   Future<void> _fetchUpcomingMeeting() async {
     try {
-      final data = await supabase
-          .from('zoom')
-          .select('*, mentor(*)')
-          .limit(10);
+      final data = await supabase.from('zoom').select('*, mentor(*)').limit(10);
 
       debugPrint('Supabase data received: $data');
 
@@ -252,7 +248,7 @@ Future<void> _fetchHomeCompetitions() async {
   Widget build(BuildContext context) {
     // GET DARK MODE STATE
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
-    
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF121212) : Colors.white,
       body: SafeArea(
@@ -269,7 +265,7 @@ Future<void> _fetchHomeCompetitions() async {
                 Text(
                   'Upcoming Meeting',
                   style: TextStyle(
-                    fontSize: 20, 
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : Colors.black,
                   ),
@@ -284,7 +280,7 @@ Future<void> _fetchHomeCompetitions() async {
                 Text(
                   'Courses',
                   style: TextStyle(
-                    fontSize: 20, 
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : Colors.black,
                   ),
@@ -296,7 +292,7 @@ Future<void> _fetchHomeCompetitions() async {
                 Text(
                   'Recommended Competition',
                   style: TextStyle(
-                    fontSize: 20, 
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : Colors.black,
                   ),
@@ -311,13 +307,7 @@ Future<void> _fetchHomeCompetitions() async {
     );
   }
 
-<<<<<<< HEAD
-  // ========================================
-  // HEADER SECTION (SUDAH DINAMIS)
-  // ========================================
-
-  Widget _buildHeader() {
-    // Tampilkan loading sebentar jika data pengguna sedang diambil
+  Widget _buildHeader(bool isDark) {
     if (_isUserLoading) {
       return const SizedBox(
         height: 60,
@@ -333,24 +323,34 @@ Future<void> _fetchHomeCompetitions() async {
           children: [
             Row(
               children: [
-                const Text('Hello, ', style: TextStyle(fontSize: 24)),
                 Text(
-                  // Menggunakan state _userName yang sudah dimuat dari DB
+                  'Hello, ',
+                  style: TextStyle(
+                    fontSize: 24,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                Text(
                   _userName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 4),
-            const Text(
+            Text(
               "Let's be enthusiastic to achieve!",
-              style: TextStyle(fontSize: 14, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? Colors.grey[400] : Colors.grey,
+              ),
             ),
           ],
         ),
+        // ✅ INI JUGA PERLU DIGANTI (InkWell + CircleAvatar)
         InkWell(
           onTap: () async {
             await Navigator.push(
@@ -358,120 +358,46 @@ Future<void> _fetchHomeCompetitions() async {
               MaterialPageRoute(builder: (_) => const ProfilePage()),
             );
             await supabase.auth.refreshSession();
-            if (mounted) {
-              _fetchUserData();
-            }
+            _fetchUserData();
           },
           borderRadius: BorderRadius.circular(32),
           child: CircleAvatar(
             radius: 28,
-            backgroundColor: Colors.grey.shade300,
-            backgroundImage: _avatarUrl != null
-                ? NetworkImage(_avatarUrl!)
-                : null,
-            child: _avatarUrl == null
-                ? const Icon(Icons.person, color: Colors.white)
-                : null,
+            backgroundColor: isDark ? Colors.grey[800] : Colors.grey.shade300,
+            child: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                ? ClipOval(
+                    child: Image.network(
+                      _avatarUrl!,
+                      width: 56,
+                      height: 56,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const Icon(
+                          Icons.person,
+                          color: Colors.white,
+                          size: 28,
+                        );
+                      },
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                      loadingProgress.expectedTotalBytes!
+                                : null,
+                            strokeWidth: 2,
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                : const Icon(Icons.person, color: Colors.white, size: 28),
           ),
         ),
       ],
-=======
-  Widget _buildHeader(bool isDark) {
-  if (_isUserLoading) {
-    return const SizedBox(
-      height: 60,
-      child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
->>>>>>> 2cbcfadfc20c300cf43cc2eea3c9eccf34757c1a
     );
   }
-
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-    children: [
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(
-                'Hello, ', 
-                style: TextStyle(
-                  fontSize: 24,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-              Text(
-                _userName,
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : Colors.black,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            "Let's be enthusiastic to achieve!",
-            style: TextStyle(
-              fontSize: 14, 
-              color: isDark ? Colors.grey[400] : Colors.grey,
-            ),
-          ),
-        ],
-      ),
-      // ✅ INI JUGA PERLU DIGANTI (InkWell + CircleAvatar)
-      InkWell(
-        onTap: () async {
-          await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ProfilePage()),
-          );
-          await supabase.auth.refreshSession();
-          _fetchUserData();
-        },
-        borderRadius: BorderRadius.circular(32),
-        child: CircleAvatar(
-          radius: 28,
-          backgroundColor: isDark ? Colors.grey[800] : Colors.grey.shade300,
-          child: _avatarUrl != null && _avatarUrl!.isNotEmpty
-              ? ClipOval(
-                  child: Image.network(
-                    _avatarUrl!,
-                    width: 56,
-                    height: 56,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.person, 
-                        color: Colors.white,
-                        size: 28,
-                      );
-                    },
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return Center(
-                        child: CircularProgressIndicator(
-                          value: loadingProgress.expectedTotalBytes != null
-                              ? loadingProgress.cumulativeBytesLoaded /
-                                  loadingProgress.expectedTotalBytes!
-                              : null,
-                          strokeWidth: 2,
-                        ),
-                      );
-                    },
-                  ),
-                )
-              : const Icon(
-                  Icons.person, 
-                  color: Colors.white,
-                  size: 28,
-                ),
-        ),
-      ),
-    ],
-  );
-}
 
   Widget _buildUpcomingMeeting(bool isDark) {
     return GestureDetector(
@@ -508,7 +434,7 @@ Future<void> _fetchHomeCompetitions() async {
                   Text(
                     'Discuss with mentor',
                     style: TextStyle(
-                      fontSize: 14, 
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                       color: isDark ? Colors.white : Colors.black,
                     ),
@@ -520,14 +446,14 @@ Future<void> _fetchHomeCompetitions() async {
                       Text(
                         '30 Juli 2024',
                         style: TextStyle(
-                          fontSize: 11, 
+                          fontSize: 11,
                           color: isDark ? Colors.grey[400] : Colors.grey,
                         ),
                       ),
                       Text(
                         '19.00-21.00 WIB',
                         style: TextStyle(
-                          fontSize: 11, 
+                          fontSize: 11,
                           color: isDark ? Colors.grey[400] : Colors.grey,
                         ),
                       ),
@@ -580,7 +506,7 @@ Future<void> _fetchHomeCompetitions() async {
             Text(
               'My Feature',
               style: TextStyle(
-                fontSize: 20, 
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: isDark ? Colors.white : Colors.black,
               ),
@@ -688,9 +614,7 @@ Future<void> _fetchHomeCompetitions() async {
         child: Center(
           child: Text(
             "Belum ada course tersedia.",
-            style: TextStyle(
-              color: isDark ? Colors.grey[400] : Colors.grey,
-            ),
+            style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey),
           ),
         ),
       );
@@ -720,7 +644,7 @@ Future<void> _fetchHomeCompetitions() async {
     final String imageUrl = courseData['link_gambar'] ?? '';
     final int lessonsCount = courseData['jumlah_lesson'] ?? 0;
     final String duration = courseData['durasi_course'] ?? '-';
-    
+
     final List ratings = courseData['rating'] ?? [];
     String ratingStr = '0.0';
     if (ratings.isNotEmpty) {
@@ -751,7 +675,7 @@ Future<void> _fetchHomeCompetitions() async {
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: isDark 
+                color: isDark
                     ? Colors.black.withOpacity(0.3)
                     : Colors.grey.shade300,
                 blurRadius: 10,
@@ -806,9 +730,7 @@ Future<void> _fetchHomeCompetitions() async {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: isDark 
-                            ? Colors.grey[800]
-                            : Colors.white,
+                        color: isDark ? Colors.grey[800] : Colors.white,
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -905,7 +827,7 @@ Future<void> _fetchHomeCompetitions() async {
     );
   }
 
-Widget _buildCompetitionCarousel(bool isDark) {
+  Widget _buildCompetitionCarousel(bool isDark) {
     if (_isLoadingCompetitions) {
       return const SizedBox(
         height: 320,
@@ -919,9 +841,7 @@ Widget _buildCompetitionCarousel(bool isDark) {
         child: Center(
           child: Text(
             "Belum ada kompetisi yang sedang berlangsung.",
-            style: TextStyle(
-              color: isDark ? Colors.grey[400] : Colors.grey,
-            ),
+            style: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey),
           ),
         ),
       );
@@ -962,13 +882,9 @@ Widget _buildCompetitionCarousel(bool isDark) {
           itemBuilder: (context, index) {
             final competition = _competitionList[index];
             final String imageUrl =
-                competition['image_url'] ??
-                competition['poster'] ??
-                '';
+                competition['image_url'] ?? competition['poster'] ?? '';
             final String title = competition['title'] ?? 'No Title';
-            final String status =
-                competition['display_status'] ??
-                'Closed';
+            final String status = competition['display_status'] ?? 'Closed';
 
             return AnimatedBuilder(
               animation: _pageController,
@@ -993,7 +909,7 @@ Widget _buildCompetitionCarousel(bool isDark) {
                   child: GestureDetector(
                     onTap: () {
                       final competitionData = Competition.fromJson(competition);
-                      
+
                       Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -1017,110 +933,110 @@ Widget _buildCompetitionCarousel(bool isDark) {
   }
 
   Widget _buildCompetitionCard(String imageUrl, String title, String status) {
-  Color statusColor = status == 'Closed'
-      ? Colors.white
-      : (status == 'On Going'
-            ? const Color(0xFF2D5F3F)
-            : const Color(0xFF8B6914));
+    Color statusColor = status == 'Closed'
+        ? Colors.white
+        : (status == 'On Going'
+              ? const Color(0xFF2D5F3F)
+              : const Color(0xFF8B6914));
 
-  Color statusBg = status == 'Closed'
-      ? const Color(0xFFE89B8E)
-      : (status == 'On Going'
-            ? const Color(0xFFA8D5BA)
-            : const Color(0xFFFFF59D));
+    Color statusBg = status == 'Closed'
+        ? const Color(0xFFE89B8E)
+        : (status == 'On Going'
+              ? const Color(0xFFA8D5BA)
+              : const Color(0xFFFFF59D));
 
-  return Container(
-    // ✅ LAYER 1: SHADOW DI SINI (PALING LUAR)
-    decoration: BoxDecoration(
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.3),
-          blurRadius: 15,
-          offset: const Offset(0, 8),
-          spreadRadius: 2,
-        ),
-      ],
-    ),
-    // ✅ LAYER 2: CLIP ROUNDED CORNER DI DALAM
-    child: ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        // ✅ LAYER 3: BACKGROUND COLOR (FALLBACK)
-        color: Colors.grey.shade300,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  color: Colors.grey.shade300,
-                  child: const Center(
-                    child: Icon(Icons.emoji_events, size: 60),
-                  ),
-                );
-              },
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.3),
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.7),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 20,
-              left: 20,
-              child: Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  shadows: [
-                    Shadow(
-                      offset: Offset(0, 2),
-                      blurRadius: 4,
-                      color: Colors.black45,
+    return Container(
+      // ✅ LAYER 1: SHADOW DI SINI (PALING LUAR)
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      // ✅ LAYER 2: CLIP ROUNDED CORNER DI DALAM
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          // ✅ LAYER 3: BACKGROUND COLOR (FALLBACK)
+          color: Colors.grey.shade300,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: Colors.grey.shade300,
+                    child: const Center(
+                      child: Icon(Icons.emoji_events, size: 60),
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
-            ),
-            Positioned(
-              top: 20,
-              left: 20,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
+              Container(
                 decoration: BoxDecoration(
-                  color: statusBg,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.3),
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
                   ),
                 ),
               ),
-            ),
-          ],
+              Positioned(
+                bottom: 20,
+                left: 20,
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                        offset: Offset(0, 2),
+                        blurRadius: 4,
+                        color: Colors.black45,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 20,
+                left: 20,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusBg,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    status,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
