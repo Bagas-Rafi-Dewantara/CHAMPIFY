@@ -134,7 +134,9 @@ class _CoursePageState extends State<CoursePage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentList = isAvailableSelected ? availableCourseList : myCourseList;
+    final currentList = isAvailableSelected
+        ? availableCourseList
+        : myCourseList;
     final isDark = Provider.of<ThemeProvider>(context).isDarkMode;
 
     return Scaffold(
@@ -168,7 +170,9 @@ class _CoursePageState extends State<CoursePage> {
                       decoration: BoxDecoration(
                         color: isAvailableSelected
                             ? const Color(0xFFC76D61)
-                            : (isDark ? const Color(0xFF1E1E1E) : Colors.transparent),
+                            : (isDark
+                                  ? const Color(0xFF1E1E1E)
+                                  : Colors.transparent),
                         border: Border.all(color: const Color(0xFFC76D61)),
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -195,7 +199,9 @@ class _CoursePageState extends State<CoursePage> {
                       decoration: BoxDecoration(
                         color: !isAvailableSelected
                             ? const Color(0xFFC76D61)
-                            : (isDark ? const Color(0xFF1E1E1E) : Colors.transparent),
+                            : (isDark
+                                  ? const Color(0xFF1E1E1E)
+                                  : Colors.transparent),
                         border: Border.all(color: const Color(0xFFC76D61)),
                         borderRadius: BorderRadius.circular(20),
                       ),
@@ -220,51 +226,53 @@ class _CoursePageState extends State<CoursePage> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : currentList.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                isAvailableSelected
-                                    ? Icons.class_outlined
-                                    : Icons.shopping_bag_outlined,
-                                size: 60,
-                                color: Colors.grey[300],
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                isAvailableSelected
-                                    ? "Belum ada course tersedia."
-                                    : "Kamu belum membeli course apapun.",
-                                style: TextStyle(color: Colors.grey[500]),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            isAvailableSelected
+                                ? Icons.class_outlined
+                                : Icons.shopping_bag_outlined,
+                            size: 60,
+                            color: Colors.grey[300],
                           ),
-                        )
-                      : isAvailableSelected
-                          ? GridView.builder(
-                              itemCount: currentList.length,
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                crossAxisSpacing: 15,
-                                mainAxisSpacing: 15,
-                                childAspectRatio: 0.75,
-                              ),
-                              itemBuilder: (context, index) =>
-                                  AvailableCourseCard(
-                                courseData: currentList[index],
-                                isDark: isDark,
-                              ),
-                            )
-                          : ListView.builder(
-                              itemCount: currentList.length,
-                              itemBuilder: (context, index) =>
-                                  MyCourseCard(
-                                courseData: currentList[index],
-                                isDark: isDark,
-                              ),
-                            ),
+                          const SizedBox(height: 10),
+                          Text(
+                            isAvailableSelected
+                                ? "Belum ada course tersedia."
+                                : "Kamu belum membeli course apapun.",
+                            style: TextStyle(color: Colors.grey[500]),
+                          ),
+                        ],
+                      ),
+                    )
+                  : isAvailableSelected
+                  ? GridView.builder(
+                      // Tambahan padding bottom agar tidak tertutup navbar
+                      padding: const EdgeInsets.only(bottom: 120),
+                      itemCount: currentList.length,
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 15,
+                            mainAxisSpacing: 15,
+                            childAspectRatio: 0.75,
+                          ),
+                      itemBuilder: (context, index) => AvailableCourseCard(
+                        courseData: currentList[index],
+                        isDark: isDark,
+                      ),
+                    )
+                  : ListView.builder(
+                      // Tambahan padding bottom agar tidak tertutup navbar
+                      padding: const EdgeInsets.only(bottom: 120),
+                      itemCount: currentList.length,
+                      itemBuilder: (context, index) => MyCourseCard(
+                        courseData: currentList[index],
+                        isDark: isDark,
+                      ),
+                    ),
             ),
           ],
         ),
@@ -300,7 +308,7 @@ class AvailableCourseCard extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: isDark 
+              color: isDark
                   ? Colors.black.withOpacity(0.3)
                   : const Color(0xFFFFE4DD),
               blurRadius: 5,
