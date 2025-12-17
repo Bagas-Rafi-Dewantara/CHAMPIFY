@@ -22,6 +22,7 @@ dependencies:
   youtube_player_flutter: ^9.0.1 # <--- Tambahkan ini
   google_nav_bar: ^5.0.7
   image_picker: ^1.1.1
+  url_launcher: ^6.3.0
 
 dev_dependencies:
   flutter_test:

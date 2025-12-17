@@ -1,6 +1,7 @@
 // ==================== FILE: lib/competition.dart ====================
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 // Ambil instance Supabase
 final supabase = Supabase.instance.client;
@@ -39,16 +40,14 @@ class Competition {
   });
 
   factory Competition.fromJson(Map<String, dynamic> json) {
+    String formatCurrency(int number) {
+      return number.toString().replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.');
+    }
+
     String prizeRange = 'Free';
     int minFee = json['fee_min'] ?? 0;
     int maxFee = json['fee_max'] ?? 0;
-
-    String formatCurrency(int number) {
-      return number.toString().replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (Match m) => '${m[1]}.',
-      );
-    }
 
     if (minFee == 0) {
       prizeRange = 'Free';
@@ -102,6 +101,7 @@ class Competition {
 // ==================== DATA SERVICE ====================
 
 class CompetitionService {
+  // 1. Fetch Semua Kompetisi
   static Future<List<Competition>> fetchCompetitions() async {
     try {
       final response = await supabase
@@ -115,6 +115,62 @@ class CompetitionService {
     } catch (e) {
       debugPrint('Error fetching competitions: $e');
       return [];
+    }
+  }
+
+  // 2. Fetch ID Kompetisi yang Disimpan oleh User
+  static Future<List<int>> fetchSavedCompetitionIds() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return [];
+
+    try {
+      final response = await supabase
+          .from('competition_saved')
+          .select('id_competition')
+          .eq('id_pengguna', user.id);
+
+      // Mengambil list ID dari response
+      return (response as List)
+          .map((item) => item['id_competition'] as int)
+          .toList();
+    } catch (e) {
+      debugPrint('Error fetching saved IDs: $e');
+      return [];
+    }
+  }
+
+  // 3. Simpan Kompetisi ke Database
+  static Future<bool> saveCompetition(int competitionId) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      await supabase.from('competition_saved').insert({
+        'id_pengguna': user.id,
+        'id_competition': competitionId,
+      });
+      return true;
+    } catch (e) {
+      debugPrint('Error saving competition: $e');
+      return false;
+    }
+  }
+
+  // 4. Hapus Simpanan Kompetisi dari Database
+  static Future<bool> unsaveCompetition(int competitionId) async {
+    final user = supabase.auth.currentUser;
+    if (user == null) return false;
+
+    try {
+      await supabase
+          .from('competition_saved')
+          .delete()
+          .eq('id_pengguna', user.id)
+          .eq('id_competition', competitionId);
+      return true;
+    } catch (e) {
+      debugPrint('Error unsaving competition: $e');
+      return false;
     }
   }
 }
@@ -157,6 +213,32 @@ class CompetitionHelper {
       return 'OPEN REGISTRATION ${title.toUpperCase()}';
     }
   }
+
+  static Future<void> launchRegistrationLink(BuildContext context, String urlString) async {
+    if (urlString.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Link pendaftaran tidak tersedia.')),
+      );
+      return;
+    }
+
+    String finalUrl = urlString.trim();
+    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      finalUrl = 'https://$finalUrl';
+    }
+
+    final Uri url = Uri.parse(finalUrl);
+
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        throw Exception('Could not launch $url');
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal membuka browser: $e')),
+      );
+    }
+  }
 }
 
 // ==================== SCREENS ====================
@@ -179,14 +261,25 @@ class _CompetitionListScreenState extends State<CompetitionListScreen> {
   @override
   void initState() {
     super.initState();
-    _loadCompetitions();
+    _initializeData();
   }
 
-  Future<void> _loadCompetitions() async {
+  // Mengambil Data Kompetisi & Status Saved
+  Future<void> _initializeData() async {
     setState(() => isLoading = true);
+    
+    // 1. Fetch semua kompetisi
     final competitions = await CompetitionService.fetchCompetitions();
+    
+    // 2. Fetch ID yang sudah disave user
+    final savedIds = await CompetitionService.fetchSavedCompetitionIds();
+
     setState(() {
       allCompetitions = competitions;
+      // Filter kompetisi yang ID-nya ada di savedIds
+      savedCompetitions = competitions
+          .where((comp) => savedIds.contains(comp.id))
+          .toList();
       isLoading = false;
     });
   }
@@ -195,6 +288,44 @@ class _CompetitionListScreenState extends State<CompetitionListScreen> {
   void dispose() {
     searchController.dispose();
     super.dispose();
+  }
+
+  // Fungsi Toggle Save dengan Database
+  Future<void> _toggleSave(Competition competition) async {
+    final isAlreadySaved = savedCompetitions.contains(competition);
+
+    // Optimistic UI Update (Update tampilan dulu biar cepat)
+    setState(() {
+      if (isAlreadySaved) {
+        savedCompetitions.remove(competition);
+      } else {
+        savedCompetitions.add(competition);
+      }
+    });
+
+    // Kirim request ke Database
+    bool success;
+    if (isAlreadySaved) {
+      success = await CompetitionService.unsaveCompetition(competition.id);
+    } else {
+      success = await CompetitionService.saveCompetition(competition.id);
+    }
+
+    // Jika gagal, kembalikan tampilan seperti semula (Rollback)
+    if (!success) {
+      if (mounted) {
+        setState(() {
+          if (isAlreadySaved) {
+            savedCompetitions.add(competition);
+          } else {
+            savedCompetitions.remove(competition);
+          }
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Gagal menyimpan data. Periksa koneksi internet.')),
+        );
+      }
+    }
   }
 
   List<Competition> getFilteredCompetitions() {
@@ -208,12 +339,12 @@ class _CompetitionListScreenState extends State<CompetitionListScreen> {
           .where((comp) => comp.status == selectedFilter)
           .toList();
     }
-
+    
     if (searchQuery.isNotEmpty) {
       competitions = competitions.where((comp) {
         return comp.title.toLowerCase().contains(searchQuery.toLowerCase()) ||
-            comp.organizer.toLowerCase().contains(searchQuery.toLowerCase()) ||
-            comp.category.toLowerCase().contains(searchQuery.toLowerCase());
+               comp.organizer.toLowerCase().contains(searchQuery.toLowerCase()) ||
+               comp.category.toLowerCase().contains(searchQuery.toLowerCase());
       }).toList();
     }
     return competitions;
@@ -229,7 +360,7 @@ class _CompetitionListScreenState extends State<CompetitionListScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        automaticallyImplyLeading: false, // Menghilangkan tombol back
+        automaticallyImplyLeading: false, 
         title: const Text(
           'Competition',
           style: TextStyle(
@@ -249,9 +380,7 @@ class _CompetitionListScreenState extends State<CompetitionListScreen> {
                       ? const SizedBox()
                       : SizedBox(
                           height: 280,
-                          child: CompetitionCarousel(
-                            competitions: allCompetitions,
-                          ),
+                          child: CompetitionCarousel(competitions: allCompetitions),
                         ),
                 ),
                 SliverPersistentHeader(
@@ -260,8 +389,7 @@ class _CompetitionListScreenState extends State<CompetitionListScreen> {
                     searchController: searchController,
                     searchQuery: searchQuery,
                     selectedFilter: selectedFilter,
-                    onSearchChanged: (value) =>
-                        setState(() => searchQuery = value),
+                    onSearchChanged: (value) => setState(() => searchQuery = value),
                     onClearSearch: () => setState(() {
                       searchController.clear();
                       searchQuery = '';
@@ -272,110 +400,53 @@ class _CompetitionListScreenState extends State<CompetitionListScreen> {
                   ),
                 ),
                 if (showEmptyState)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _buildEmptyStateSaved(),
-                  )
+                  SliverFillRemaining(hasScrollBody: false, child: _buildEmptyStateSaved())
                 else if (filteredCompetitions.isEmpty)
-                  SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: _buildEmptyStateNotFound(),
-                  )
+                  SliverFillRemaining(hasScrollBody: false, child: _buildEmptyStateNotFound())
                 else
                   SliverList(
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final competition = filteredCompetitions[index];
-                      final isSaved = savedCompetitions.contains(competition);
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: CompetitionCard(
-                          competition: competition,
-                          statusColor: CompetitionHelper.getStatusColor(
-                            competition.status,
-                          ),
-                          statusText: CompetitionHelper.getStatusText(
-                            competition.status,
-                          ),
-                          isSaved: isSaved,
-                          onSaveToggle: () {
-                            setState(() {
-                              if (isSaved) {
-                                savedCompetitions.remove(competition);
-                              } else {
-                                savedCompetitions.add(competition);
-                              }
-                            });
-                          },
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => CompetitionDetailScreen(
-                                  competition: competition,
-                                  isSaved: isSaved,
-                                  onSaveToggle: () {
-                                    setState(() {
-                                      if (isSaved) {
-                                        savedCompetitions.remove(competition);
-                                      } else {
-                                        savedCompetitions.add(competition);
-                                      }
-                                    });
-                                  },
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final competition = filteredCompetitions[index];
+                        final isSaved = savedCompetitions.contains(competition);
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: CompetitionCard(
+                            competition: competition,
+                            statusColor: CompetitionHelper.getStatusColor(competition.status),
+                            statusText: CompetitionHelper.getStatusText(competition.status),
+                            isSaved: isSaved,
+                            onSaveToggle: () => _toggleSave(competition), // Panggil fungsi database
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CompetitionDetailScreen(
+                                    competition: competition,
+                                    isSaved: isSaved,
+                                    onSaveToggle: () => _toggleSave(competition), // Panggil fungsi database
+                                  ),
                                 ),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    }, childCount: filteredCompetitions.length),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                      childCount: filteredCompetitions.length,
+                    ),
                   ),
-                const SliverToBoxAdapter(child: SizedBox(height: 20)),
+                const SliverToBoxAdapter(child: SizedBox(height: 100)),
               ],
             ),
-      // NAVBAR DIHAPUS DARI SINI
     );
   }
 
   Widget _buildEmptyStateSaved() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.star, size: 100, color: Colors.yellow.shade300),
-          const SizedBox(height: 16),
-          const Text(
-            'Explore and Saved Competition first!',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-        ],
-      ),
-    );
+    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.star, size: 100, color: Colors.yellow.shade300), const SizedBox(height: 16), const Text('Explore and Saved Competition first!', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))]));
   }
 
   Widget _buildEmptyStateNotFound() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.search_off, size: 100, color: Colors.grey.shade300),
-          const SizedBox(height: 16),
-          Text(
-            'No competition found',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Try different keywords',
-            style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-          ),
-        ],
-      ),
-    );
+    return Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.search_off, size: 100, color: Colors.grey.shade300), const SizedBox(height: 16), Text('No competition found', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey.shade600)), const SizedBox(height: 8), Text('Try different keywords', style: TextStyle(fontSize: 14, color: Colors.grey.shade500))]));
   }
 }
 
@@ -390,7 +461,7 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   final Function(CompetitionStatus) onFilterChanged;
 
   _StickyHeaderDelegate({
-    required this.searchController,
+    required this.searchController, 
     required this.searchQuery,
     required this.selectedFilter,
     required this.onSearchChanged,
@@ -404,11 +475,7 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 160;
 
   @override
-  Widget build(
-    BuildContext context,
-    double shrinkOffset,
-    bool overlapsContent,
-  ) {
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     return Container(
       color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
@@ -425,17 +492,11 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
                 hintStyle: TextStyle(color: Colors.grey.shade400),
                 prefixIcon: Icon(Icons.search, color: Colors.grey.shade400),
                 suffixIcon: searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: Icon(Icons.clear, color: Colors.grey.shade600),
-                        onPressed: onClearSearch,
-                      )
+                    ? IconButton(icon: Icon(Icons.clear, color: Colors.grey.shade600), onPressed: onClearSearch)
                     : null,
                 filled: true,
                 fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
               ),
             ),
           ),
@@ -445,38 +506,15 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                FilterChipWidget(
-                  label: 'Saved',
-                  isSelected: selectedFilter == CompetitionStatus.saved,
-                  onTap: () => onFilterChanged(CompetitionStatus.saved),
-                ),
+                FilterChipWidget(label: 'Saved', isSelected: selectedFilter == CompetitionStatus.saved, onTap: () => onFilterChanged(CompetitionStatus.saved)),
                 const SizedBox(width: 8),
-                FilterChipWidget(
-                  label: 'All',
-                  isSelected: selectedFilter == null,
-                  onTap: () {
-                    if (selectedFilter != null)
-                      onFilterChanged(selectedFilter!);
-                  },
-                ),
+                FilterChipWidget(label: 'All', isSelected: selectedFilter == null, onTap: () { if(selectedFilter != null) onFilterChanged(selectedFilter!); }),
                 const SizedBox(width: 8),
-                FilterChipWidget(
-                  label: 'On Going',
-                  isSelected: selectedFilter == CompetitionStatus.onGoing,
-                  onTap: () => onFilterChanged(CompetitionStatus.onGoing),
-                ),
+                FilterChipWidget(label: 'On Going', isSelected: selectedFilter == CompetitionStatus.onGoing, onTap: () => onFilterChanged(CompetitionStatus.onGoing)),
                 const SizedBox(width: 8),
-                FilterChipWidget(
-                  label: 'Almost Over',
-                  isSelected: selectedFilter == CompetitionStatus.almostOver,
-                  onTap: () => onFilterChanged(CompetitionStatus.almostOver),
-                ),
+                FilterChipWidget(label: 'Almost Over', isSelected: selectedFilter == CompetitionStatus.almostOver, onTap: () => onFilterChanged(CompetitionStatus.almostOver)),
                 const SizedBox(width: 8),
-                FilterChipWidget(
-                  label: 'Closed',
-                  isSelected: selectedFilter == CompetitionStatus.closed,
-                  onTap: () => onFilterChanged(CompetitionStatus.closed),
-                ),
+                FilterChipWidget(label: 'Closed', isSelected: selectedFilter == CompetitionStatus.closed, onTap: () => onFilterChanged(CompetitionStatus.closed)),
               ],
             ),
           ),
@@ -488,12 +526,11 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   bool shouldRebuild(_StickyHeaderDelegate oldDelegate) {
-    return searchQuery != oldDelegate.searchQuery ||
-        selectedFilter != oldDelegate.selectedFilter;
+    return searchQuery != oldDelegate.searchQuery || selectedFilter != oldDelegate.selectedFilter;
   }
 }
 
-// ==================== DETAIL SCREEN & FULL SCREEN IMAGE ====================
+// ==================== DETAIL SCREEN & FULL SCREEN ====================
 
 class FullScreenImagePage extends StatelessWidget {
   final String imageUrl;
@@ -509,9 +546,9 @@ class FullScreenImagePage extends StatelessWidget {
       ),
       body: Center(
         child: InteractiveViewer(
-          panEnabled: true,
+          panEnabled: true, 
           minScale: 0.5,
-          maxScale: 4,
+          maxScale: 4, 
           child: Image.network(
             imageUrl,
             fit: BoxFit.contain,
@@ -537,8 +574,7 @@ class CompetitionDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<CompetitionDetailScreen> createState() =>
-      _CompetitionDetailScreenState();
+  State<CompetitionDetailScreen> createState() => _CompetitionDetailScreenState();
 }
 
 class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
@@ -550,27 +586,30 @@ class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
     _isSaved = widget.isSaved;
   }
 
+  // Update status lokal jika parent berubah (agar sinkron)
+  @override
+  void didUpdateWidget(covariant CompetitionDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.isSaved != widget.isSaved) {
+      setState(() {
+        _isSaved = widget.isSaved;
+      });
+    }
+  }
+
   Color _getBackgroundColor(CompetitionStatus status) {
     switch (status) {
-      case CompetitionStatus.closed:
-        return const Color(0xFFFFA791);
-      case CompetitionStatus.almostOver:
-        return const Color(0xFFFCE7B0);
-      case CompetitionStatus.onGoing:
-        return const Color(0xFFE9FAB0);
-      case CompetitionStatus.saved:
-        return Colors.blue.shade100;
+      case CompetitionStatus.closed: return const Color(0xFFFFA791);
+      case CompetitionStatus.almostOver: return const Color(0xFFFCE7B0);
+      case CompetitionStatus.onGoing: return const Color(0xFFE9FAB0);
+      case CompetitionStatus.saved: return Colors.blue.shade100;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = CompetitionHelper.getStatusColor(
-      widget.competition.status,
-    );
-    final statusText = CompetitionHelper.getStatusText(
-      widget.competition.status,
-    );
+    final statusColor = CompetitionHelper.getStatusColor(widget.competition.status);
+    final statusText = CompetitionHelper.getStatusText(widget.competition.status);
     final backgroundColor = _getBackgroundColor(widget.competition.status);
 
     return Scaffold(
@@ -578,24 +617,19 @@ class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () => Navigator.pop(context),
-        ),
-        title: const Text(
-          'Information Competition',
-          style: TextStyle(color: Colors.black, fontSize: 18),
-        ),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Colors.black), onPressed: () => Navigator.pop(context)),
+        title: const Text('Information Competition', style: TextStyle(color: Colors.black, fontSize: 18)),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(
-              _isSaved ? Icons.bookmark : Icons.bookmark_border,
-              color: Colors.black,
-            ),
+            icon: Icon(_isSaved ? Icons.bookmark : Icons.bookmark_border, color: Colors.black),
             onPressed: () {
-              setState(() => _isSaved = !_isSaved);
+              // Panggil fungsi toggle dari parent (CompetitionListScreen)
               widget.onSaveToggle();
+              // Update state lokal UI detail
+              setState(() {
+                _isSaved = !_isSaved;
+              });
             },
           ),
         ],
@@ -604,48 +638,17 @@ class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              spreadRadius: 1,
-              blurRadius: 10,
-              offset: const Offset(0, -3),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), spreadRadius: 1, blurRadius: 10, offset: const Offset(0, -3))],
         ),
         child: SizedBox(
           width: double.infinity,
           height: 50,
           child: ElevatedButton(
-            onPressed: statusText == 'Closed'
-                ? null
-                : () {
-                    if (widget.competition.registrationLink.isNotEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            'Membuka Link: ${widget.competition.registrationLink}',
-                          ),
-                        ),
-                      );
-                    }
-                  },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade300,
-              disabledBackgroundColor: Colors.grey.shade300,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              elevation: 0,
-            ),
-            child: Text(
-              statusText == 'Closed' ? 'Competition Closed' : 'Register Now',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
+            onPressed: statusText == 'Closed' ? null : () {
+              CompetitionHelper.launchRegistrationLink(context, widget.competition.registrationLink);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade300, disabledBackgroundColor: Colors.grey.shade300, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
+            child: Text(statusText == 'Closed' ? 'Competition Closed' : 'Register Now', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
           ),
         ),
       ),
@@ -677,10 +680,10 @@ class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
                 child: Container(
                   margin: const EdgeInsets.all(16),
                   child: AspectRatio(
-                    aspectRatio: 2 / 3,
+                    aspectRatio: 2 / 3, 
                     child: Container(
                       decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
+                        color: Colors.grey.shade300, 
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
@@ -696,11 +699,7 @@ class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
                           widget.competition.imageUrl,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) => Center(
-                            child: Icon(
-                              Icons.broken_image,
-                              size: 80,
-                              color: Colors.grey.shade400,
-                            ),
+                            child: Icon(Icons.broken_image, size: 80, color: Colors.grey.shade400),
                           ),
                         ),
                       ),
@@ -712,51 +711,18 @@ class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
               Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2))]),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: Text(
-                            widget.competition.title,
-                            style: const TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                        Expanded(child: Text(widget.competition.title, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold))),
                         Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            statusText,
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: statusText == 'Closed'
-                                  ? Colors.red.shade700
-                                  : Colors.green.shade700,
-                            ),
-                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(color: statusColor, borderRadius: BorderRadius.circular(12)),
+                          child: Text(statusText, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: statusText == 'Closed' ? Colors.red.shade700 : Colors.green.shade700)),
                         ),
                       ],
                     ),
@@ -766,86 +732,33 @@ class _CompetitionDetailScreenState extends State<CompetitionDetailScreen> {
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
-                              'Diselenggarakan oleh',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey,
-                              ),
-                            ),
-                            Text(
-                              widget.competition.organizer,
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                            const Text('Diselenggarakan oleh', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text(widget.competition.organizer, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600))
                           ],
                         ),
                       ],
                     ),
                     const SizedBox(height: 20),
-                    DetailRowWidget(
-                      icon: Icons.person,
-                      text: widget.competition.category,
-                    ),
+                    DetailRowWidget(icon: Icons.person, text: widget.competition.category),
                     const SizedBox(height: 12),
-                    DetailRowWidget(
-                      icon: Icons.attach_money,
-                      text: widget.competition.prizeRange,
-                    ),
+                    DetailRowWidget(icon: Icons.attach_money, text: widget.competition.prizeRange),
                     const SizedBox(height: 12),
-                    DetailRowWidget(
-                      icon: Icons.location_on,
-                      text: widget.competition.location,
-                    ),
+                    DetailRowWidget(icon: Icons.location_on, text: widget.competition.location),
                     const SizedBox(height: 12),
-                    DetailRowWidget(
-                      icon: Icons.calendar_today,
-                      text:
-                          '${widget.competition.startDate} - ${widget.competition.endDate}',
-                    ),
+                    DetailRowWidget(icon: Icons.calendar_today, text: '${widget.competition.startDate} - ${widget.competition.endDate}'),
                   ],
                 ),
               ),
               Container(
                 margin: const EdgeInsets.all(16),
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.9),
-                  borderRadius: BorderRadius.circular(16),
-                ),
+                decoration: BoxDecoration(color: Colors.white.withOpacity(0.9), borderRadius: BorderRadius.circular(16)),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.lightbulb, color: Colors.orange.shade700),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            CompetitionHelper.getDescriptionTitle(
-                              widget.competition.title,
-                              statusText,
-                            ),
-                            style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange.shade700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    Row(children: [Icon(Icons.lightbulb, color: Colors.orange.shade700), const SizedBox(width: 8), Expanded(child: Text(CompetitionHelper.getDescriptionTitle(widget.competition.title, statusText), style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.orange.shade700)))]),
                     const SizedBox(height: 12),
-                    Text(
-                      widget.competition.description,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade800,
-                        height: 1.5,
-                      ),
-                    ),
+                    Text(widget.competition.description, style: TextStyle(fontSize: 14, color: Colors.grey.shade800, height: 1.5)),
                   ],
                 ),
               ),
@@ -875,26 +788,17 @@ class _CompetitionCarouselState extends State<CompetitionCarousel> {
     _pageController = PageController(viewportFraction: 0.55);
     Future.delayed(const Duration(seconds: 3), _autoScroll);
   }
-
   void _autoScroll() {
     if (!mounted) return;
-    setState(
-      () => _currentPage = (_currentPage + 1) % widget.competitions.length,
-    );
-    _pageController.animateToPage(
-      _currentPage,
-      duration: const Duration(milliseconds: 500),
-      curve: Curves.easeInOut,
-    );
+    setState(() => _currentPage = (_currentPage + 1) % widget.competitions.length);
+    _pageController.animateToPage(_currentPage, duration: const Duration(milliseconds: 500), curve: Curves.easeInOut);
     Future.delayed(const Duration(seconds: 3), _autoScroll);
   }
-
   @override
   void dispose() {
     _pageController.dispose();
     super.dispose();
   }
-
   @override
   Widget build(BuildContext context) {
     return PageView.builder(
@@ -902,11 +806,7 @@ class _CompetitionCarouselState extends State<CompetitionCarousel> {
       onPageChanged: (index) => setState(() => _currentPage = index),
       itemCount: widget.competitions.length,
       itemBuilder: (context, index) {
-        return AnimatedScale(
-          scale: _currentPage == index ? 1.0 : 0.9,
-          duration: const Duration(milliseconds: 300),
-          child: CarouselCard(competition: widget.competitions[index]),
-        );
+        return AnimatedScale(scale: _currentPage == index ? 1.0 : 0.9, duration: const Duration(milliseconds: 300), child: CarouselCard(competition: widget.competitions[index]));
       },
     );
   }
@@ -917,92 +817,37 @@ class CarouselCard extends StatelessWidget {
   const CarouselCard({super.key, required this.competition});
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Image.network(
-              competition.imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (c, e, s) => Container(
-                color: Colors.grey.shade400,
-                child: const Icon(Icons.image),
-              ),
-            ),
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.black.withOpacity(0.3),
-                    Colors.black.withOpacity(0.7),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (context) => CompetitionDetailScreen(competition: competition, isSaved: false, onSaveToggle: () {})));
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        decoration: BoxDecoration(borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 10, offset: const Offset(0, 5))]),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              Image.network(competition.imageUrl, fit: BoxFit.cover, errorBuilder: (c,e,s) => Container(color: Colors.grey.shade400, child: const Icon(Icons.image))),
+              Container(decoration: BoxDecoration(gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.black.withOpacity(0.3), Colors.black.withOpacity(0.7)]))),
+              Positioned(
+                bottom: 20, left: 15, right: 15,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(competition.title, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(color: CompetitionHelper.getStatusColor(competition.status).withOpacity(0.9), borderRadius: BorderRadius.circular(8)),
+                      child: Text(CompetitionHelper.getStatusText(competition.status), style: TextStyle(color: CompetitionHelper.getStatusText(competition.status) == 'Closed' ? Colors.red.shade900 : Colors.green.shade900, fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
                   ],
                 ),
               ),
-            ),
-            Positioned(
-              bottom: 20,
-              left: 15,
-              right: 15,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    competition.title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: CompetitionHelper.getStatusColor(
-                        competition.status,
-                      ).withOpacity(0.9),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      CompetitionHelper.getStatusText(competition.status),
-                      style: TextStyle(
-                        color:
-                            CompetitionHelper.getStatusText(
-                                  competition.status,
-                                ) ==
-                                'Closed'
-                            ? Colors.red.shade900
-                            : Colors.green.shade900,
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -1034,17 +879,7 @@ class CompetitionCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.shade200,
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 8, offset: const Offset(0, 2))]),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1052,25 +887,11 @@ class CompetitionCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  width: 110,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  width: 110, height: 140,
+                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(12)),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      competition.imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (c, e, s) => Center(
-                        child: Icon(
-                          Icons.image,
-                          size: 40,
-                          color: Colors.grey.shade400,
-                        ),
-                      ),
-                    ),
+                    child: Image.network(competition.imageUrl, fit: BoxFit.cover, errorBuilder: (c,e,s) => Center(child: Icon(Icons.image, size: 40, color: Colors.grey.shade400))),
                   ),
                 ),
                 Expanded(
@@ -1079,87 +900,21 @@ class CompetitionCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                competition.organizer,
-                                style: const TextStyle(
-                                  fontSize: 11,
-                                  color: Colors.grey,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            GestureDetector(
-                              onTap: onSaveToggle,
-                              child: Icon(
-                                isSaved
-                                    ? Icons.bookmark
-                                    : Icons.bookmark_border,
-                                color: Colors.black,
-                                size: 20,
-                              ),
-                            ),
-                          ],
-                        ),
+                        Row(children: [
+                          Expanded(child: Text(competition.organizer, style: const TextStyle(fontSize: 11, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis)), 
+                          GestureDetector(onTap: onSaveToggle, child: Icon(isSaved ? Icons.bookmark : Icons.bookmark_border, color: Colors.black, size: 20))]),
                         const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
-                          ),
-                          decoration: BoxDecoration(
-                            color: statusColor,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            statusText,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              color: statusText == 'Closed'
-                                  ? Colors.red.shade700
-                                  : Colors.green.shade700,
-                            ),
-                          ),
-                        ),
+                        Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: statusColor, borderRadius: BorderRadius.circular(12)), child: Text(statusText, style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: statusText == 'Closed' ? Colors.red.shade700 : Colors.green.shade700))),
                         const SizedBox(height: 8),
-                        Text(
-                          competition.title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                        Text(competition.title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold), maxLines: 2, overflow: TextOverflow.ellipsis),
                         const SizedBox(height: 8),
-                        InfoRowWidget(
-                          icon: Icons.person,
-                          text: competition.category,
-                          compact: true,
-                        ),
+                        InfoRowWidget(icon: Icons.person, text: competition.category, compact: true),
                         const SizedBox(height: 4),
-                        InfoRowWidget(
-                          icon: Icons.attach_money,
-                          text: competition.prizeRange,
-                          compact: true,
-                        ),
+                        InfoRowWidget(icon: Icons.attach_money, text: competition.prizeRange, compact: true),
                         const SizedBox(height: 4),
-                        InfoRowWidget(
-                          icon: Icons.location_on,
-                          text: competition.location,
-                          compact: true,
-                        ),
+                        InfoRowWidget(icon: Icons.location_on, text: competition.location, compact: true),
                         const SizedBox(height: 4),
-                        InfoRowWidget(
-                          icon: Icons.calendar_today,
-                          text:
-                              '${competition.startDate} - ${competition.endDate}',
-                          compact: true,
-                        ),
+                        InfoRowWidget(icon: Icons.calendar_today, text: '${competition.startDate} - ${competition.endDate}', compact: true),
                       ],
                     ),
                   ),
@@ -1169,40 +924,13 @@ class CompetitionCard extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: SizedBox(
-                width: double.infinity,
-                height: 45,
+                width: double.infinity, height: 45,
                 child: ElevatedButton(
-                  onPressed: statusText == 'Closed'
-                      ? null
-                      : () {
-                          if (competition.registrationLink.isNotEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  'Membuka Link: ${competition.registrationLink}',
-                                ),
-                              ),
-                            );
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange.shade300,
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
-                  ),
-                  child: Text(
-                    statusText == 'Closed'
-                        ? 'Competition Closed'
-                        : 'Register Now',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
+                  onPressed: statusText == 'Closed' ? null : () {
+                    CompetitionHelper.launchRegistrationLink(context, competition.registrationLink);
+                  }, 
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.orange.shade300, disabledBackgroundColor: Colors.grey.shade300, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0), 
+                  child: Text(statusText == 'Closed' ? 'Competition Closed' : 'Register Now', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white))
                 ),
               ),
             ),
@@ -1216,96 +944,28 @@ class CompetitionCard extends StatelessWidget {
 // ==================== HELPER WIDGETS ====================
 
 class FilterChipWidget extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-  const FilterChipWidget({
-    super.key,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
+  final String label; final bool isSelected; final VoidCallback onTap;
+  const FilterChipWidget({super.key, required this.label, required this.isSelected, required this.onTap});
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.orange.shade300 : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? Colors.orange.shade300 : Colors.grey.shade300,
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.grey.shade600,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
-      ),
-    );
+    return GestureDetector(onTap: onTap, child: Container(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10), decoration: BoxDecoration(color: isSelected ? Colors.orange.shade300 : Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: isSelected ? Colors.orange.shade300 : Colors.grey.shade300)), child: Text(label, style: TextStyle(color: isSelected ? Colors.white : Colors.grey.shade600, fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal))));
   }
 }
 
 class InfoRowWidget extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final bool compact;
-  const InfoRowWidget({
-    super.key,
-    required this.icon,
-    required this.text,
-    this.compact = false,
-  });
+  final IconData icon; final String text; final bool compact;
+  const InfoRowWidget({super.key, required this.icon, required this.text, this.compact = false});
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: compact ? 13 : 16, color: Colors.orange.shade300),
-        SizedBox(width: compact ? 6 : 8),
-        Expanded(
-          child: Text(
-            text,
-            style: TextStyle(
-              fontSize: compact ? 11 : 13,
-              color: Colors.grey.shade700,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
+    return Row(children: [Icon(icon, size: compact ? 13 : 16, color: Colors.orange.shade300), SizedBox(width: compact ? 6 : 8), Expanded(child: Text(text, style: TextStyle(fontSize: compact ? 11 : 13, color: Colors.grey.shade700), maxLines: 1, overflow: TextOverflow.ellipsis))]);
   }
 }
 
 class DetailRowWidget extends StatelessWidget {
-  final IconData icon;
-  final String text;
+  final IconData icon; final String text;
   const DetailRowWidget({super.key, required this.icon, required this.text});
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.orange.shade50,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 18, color: Colors.orange.shade700),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-        ),
-      ],
-    );
+    return Row(children: [Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(8)), child: Icon(icon, size: 18, color: Colors.orange.shade700)), const SizedBox(width: 12), Expanded(child: Text(text, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)))]);
   }
 }
