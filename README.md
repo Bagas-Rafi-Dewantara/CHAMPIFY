@@ -11,14 +11,15 @@
     Platform e-learning dan komunitas kompetisi untuk mahasiswa dan pelajar
   </p>
 
-  [![Flutter](https://img.shields.io/badge/Flutter-3.0+-02569B?style=flat&logo=flutter)](https://flutter.dev)
-  [![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=flat&logo=supabase)](https://supabase.com)
-  [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Flutter](https://img.shields.io/badge/Flutter-3.0+-02569B?style=flat&logo=flutter)](https://flutter.dev)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?style=flat&logo=supabase)](https://supabase.com)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 </div>
 
 ## 📖 About Project
 
-**Champify** adalah aplikasi Android berbasis Flutter yang dirancang sebagai *all-in-one learning & competition platform* untuk membantu mahasiswa dan pelajar mempersiapkan diri mengikuti berbagai kompetisi akademik.
+**Champify** adalah aplikasi Android berbasis Flutter yang dirancang sebagai _all-in-one learning & competition platform_ untuk membantu mahasiswa dan pelajar mempersiapkan diri mengikuti berbagai kompetisi akademik.
 
 ### 🎯 Main Feature
 
@@ -65,28 +66,6 @@ Champify mendukung **SDGs Poin 4: Quality Education** dengan menyediakan akses p
   </tr>
 </table>
 
-### 🏗️ Architecture
-
-Aplikasi ini menggunakan **MVVM (Model-View-ViewModel) + Repository Pattern**:
-
-```
-┌─────────────┐
-│    View     │ ← UI Layer (Screens/Widgets)
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│  ViewModel  │ ← Business Logic & State Management
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│ Repository  │ ← Data Layer (Single Source of Truth)
-└──────┬──────┘
-       │
-┌──────▼──────┐
-│  Supabase   │ ← Backend (Auth, Database, API)
-└─────────────┘
-```
-
 ## 🚀 How to Install
 
 ### Requirement
@@ -128,7 +107,6 @@ flutter doctor
 
 Pastikan tidak ada error sebelum melanjutkan.
 
-
 ## ▶️ How to Run
 
 1. **Aktifkan Emulator/Perangkat**
@@ -154,7 +132,6 @@ flutter build apk --release
 ```
 
 File APK akan tersimpan di `build/app/outputs/flutter-apk/app-release.apk`
-
 
 ## 📁 Folder Structure
 
@@ -230,7 +207,6 @@ lib/
     <td><a href="https://github.com/tiamufh">@tiamufh</a></td>
   </tr>
 </table>
-
 
 <div align="center">
   <p><strong>✨ Be a Champion with the Right Preparation! ✨</strong></p>
