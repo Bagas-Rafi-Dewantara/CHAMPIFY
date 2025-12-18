@@ -93,13 +93,7 @@ cd CHAMPIFY
 flutter pub get
 ```
 
-3. **Konfigurasi Supabase**
-
-   - Buat project di [Supabase](https://supabase.com)
-   - Salin **SUPABASE_URL** dan **SUPABASE_ANON_KEY**
-   - Konfigurasi credentials di file `main.dart` atau service layer
-
-4. **Verifikasi Environment**
+3. **Verifikasi Environment**
 
 ```bash
 flutter doctor
